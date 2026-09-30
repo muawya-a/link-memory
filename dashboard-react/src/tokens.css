@@ -1,0 +1,86 @@
+/* Link Memory token layers: primitive → semantic → component. */
+:root {
+  /* Primitive */
+  --lp-primitive-teal-500: #2dd4bf;
+  --lp-primitive-teal-700: #0f9f91;
+  --lp-primitive-ink-900: #162522;
+  --lp-primitive-sage-500: #71827d;
+  --lp-primitive-cream-50: #f7f5f0;
+  --lp-primitive-white: #ffffff;
+  --lp-primitive-green-400: #67e8a5;
+  --lp-primitive-amber-400: #f5c76a;
+  --lp-space-1: 4px;
+  --lp-space-2: 8px;
+  --lp-space-3: 12px;
+  --lp-space-4: 16px;
+  --lp-space-6: 24px;
+  --lp-space-8: 32px;
+  --lp-radius-control: 6px;
+  --lp-radius-card: 12px;
+  --lp-radius-hero: 15px;
+  --lp-duration-fast: 150ms;
+  --lp-duration-normal: 220ms;
+
+  /* Semantic */
+  --lp-color-background: var(--lp-primitive-cream-50);
+  --lp-color-foreground: var(--lp-primitive-ink-900);
+  --lp-color-primary: var(--lp-primitive-teal-500);
+  --lp-color-primary-strong: var(--lp-primitive-teal-700);
+  --lp-color-muted-foreground: var(--lp-primitive-sage-500);
+  --lp-color-success: var(--lp-primitive-green-400);
+  --lp-color-warning: var(--lp-primitive-amber-400);
+  --lp-color-danger: #b4232f;
+  --lp-color-shell-gutter: #e3f2ec;
+  --lp-color-on-primary: #052c28;
+  --lp-color-surface: var(--lp-primitive-white);
+  --lp-color-surface-muted: color-mix(in srgb, var(--lp-primitive-ink-900) 6%, transparent);
+  --lp-color-on-surface: var(--lp-primitive-ink-900);
+  --lp-border: color-mix(in srgb, var(--lp-color-foreground) 12%, transparent);
+  --lp-focus-ring: rgba(45, 212, 191, .24);
+  --lp-shadow-card: 0 14px 38px -28px rgba(22,37,34,.48);
+  --lp-shadow-floating: 0 18px 50px -24px rgba(22,37,34,.35);
+
+  /* Light glass — cream/sage transparency with a restrained polished highlight. */
+  --lp-light-glass-surface: rgba(255, 253, 248, .44);
+  --lp-light-glass-control: rgba(255, 255, 255, .40);
+  --lp-light-glass-highlight: rgba(255, 255, 255, .68);
+  --lp-light-glass-border: rgba(255, 255, 255, .84);
+  --lp-light-glass-tint: rgba(45, 212, 191, .10);
+  --lp-light-glass-shadow: 0 14px 38px -28px rgba(22, 37, 34, .28);
+
+  /* Component */
+  --lp-card-background: var(--lp-light-glass-surface);
+  --lp-card-radius: var(--lp-radius-card);
+  --lp-card-padding: 22px;
+  --lp-button-radius: 7px;
+  --lp-button-height: 44px;
+  --lp-nav-radius: 7px;
+}
+
+.dark {
+  /* Evergreen is the surface foundation; winter-sky cyan is atmospheric light only. */
+  --lp-night-sky-blue: #8fd7ff;
+  --lp-color-background: #071512;
+  --lp-color-foreground: #e7f1ed;
+  --lp-color-muted-foreground: #9bb1aa;
+  --lp-color-surface: #10251f;
+  --lp-color-surface-muted: rgba(231,241,237,.07);
+  --lp-color-on-surface: #e7f1ed;
+  --lp-color-shell-gutter: #0b211b;
+  --lp-card-background: rgba(15, 37, 32, .46);
+  --lp-border: rgba(218, 244, 235, .10);
+  --lp-shadow-card: 0 14px 38px -26px rgba(0,0,0,.54), 0 14px 36px -28px rgba(89, 206, 181, .16);
+  --lp-shadow-floating: 0 18px 50px -24px rgba(0,0,0,.45);
+  /* Night-sky/glass effects reuse the existing palette; no hue replacement. */
+  --lp-night-star: color-mix(in srgb, var(--lp-night-sky-blue) 70%, transparent);
+  --lp-night-glow: color-mix(in srgb, var(--lp-color-primary) 24%, transparent);
+  --lp-night-blue-glow: color-mix(in srgb, var(--lp-night-sky-blue) 52%, transparent);
+  --lp-night-center-glow: rgba(45, 212, 191, .09);
+  --lp-night-hero-blue-glow: rgba(107, 197, 255, .28);
+  --lp-night-hero-green-glow: rgba(45, 212, 191, .24);
+  --lp-night-hero-base-start: rgba(8, 25, 28, .38);
+  --lp-night-hero-base-end: rgba(9, 29, 24, .42);
+  --lp-glass-highlight: rgba(231, 247, 240, .09);
+  --lp-button-depth: rgba(0, 0, 0, .28);
+  --lp-focus-ring: color-mix(in srgb, var(--lp-night-sky-blue) 50%, transparent);
+}

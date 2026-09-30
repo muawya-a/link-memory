@@ -1,0 +1,2 @@
+# Optional local transcript/archive layer. MIT; see THIRD_PARTY_NOTICES.md.
+mempalace==3.10.0

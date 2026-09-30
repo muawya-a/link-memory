@@ -1,0 +1,40 @@
+[
+  {
+    "id": "conversation-001",
+    "title": "Synthetic Codex export conversation",
+    "create_time": 1700000000,
+    "mapping": {
+      "root": {"id": "root", "message": null, "parent": null, "children": ["user-node"]},
+      "user-node": {
+        "id": "user-node",
+        "parent": "root",
+        "children": ["assistant-node"],
+        "message": {
+          "author": {"role": "user"},
+          "create_time": 1700000001,
+          "content": {"content_type": "text", "parts": ["Remember that the demo project uses synthetic data."]}
+        }
+      },
+      "assistant-node": {
+        "id": "assistant-node",
+        "parent": "user-node",
+        "children": [],
+        "message": {
+          "author": {"role": "assistant"},
+          "create_time": 1700000002,
+          "content": {"content_type": "text", "parts": ["I will remember the synthetic demo detail."]}
+        }
+      },
+      "tool-node": {
+        "id": "tool-node",
+        "parent": "root",
+        "children": [],
+        "message": {
+          "author": {"role": "tool"},
+          "content": {"content_type": "text", "parts": ["Never import tool output."]}
+        }
+      }
+    },
+    "current_node": "assistant-node"
+  }
+]

@@ -1,0 +1,4 @@
+# Optional dependency index only; intentionally installs nothing.
+# The default Gateway uses the Python standard library.
+# This is an index only. Use the matching hashed feature lockfile instead.
+# Reranker is a large local model runtime; PDF extraction has AGPL/commercial terms.

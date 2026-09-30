@@ -1,0 +1,3 @@
+# The base local Gateway and import tools use Python's standard library.
+# Optional model/provider adapters have separate dependencies listed in
+# requirements-optional.txt. Review licensing and compatibility before install.

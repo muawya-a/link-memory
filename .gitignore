@@ -1,0 +1,66 @@
+# Local secrets and user data
+.env
+.env.*
+!.env.example
+data/
+staging-data/
+backups/
+inbox/
+processed/
+exports/
+*.bak
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.jsonl
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+private/
+
+# Personal machine and editor state
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local user and assistant transcripts / exports
+*.har
+*.trace
+chatgpt-export*/
+codex-export*/
+claude-export*/
+
+# Re-creatable dependencies, caches, and builds
+node_modules/
+**/node_modules/
+.venv/
+.venv-*/
+*.tsbuildinfo
+dashboard-react/vite.config.js
+dashboard-react/vite.config.d.ts
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+dashboard/react/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local runtime state
+*.pid
+*.sock
+*.tmp

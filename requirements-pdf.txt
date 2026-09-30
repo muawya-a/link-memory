@@ -1,0 +1,3 @@
+# Optional local PDF text extraction. This dependency is dual-licensed AGPL-3.0
+# or commercially; choose and comply with the applicable terms before enabling.
+PyMuPDF==1.27.2.3
