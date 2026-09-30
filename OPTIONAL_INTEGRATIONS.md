@@ -10,7 +10,7 @@ All adapter flags are `false` by default. The Gateway also denies remote egress 
 | Reranking | `RERANKER_ENABLED`, `RERANKER_URL` | Install the pinned optional ML packages and run the reranker service |
 | OpenMemory-compatible adapter | `OPENMEMORY_ENABLED`, `OPENMEMORY_URL` | The existing Gateway contract expects `/v1/ingest` and `/v1/recall`. The previously copied `providers/openmemory-src` tree was LongMemory, not OpenMemory, and is excluded pending provenance and license evidence. Do not point this setting at a different OpenMemory project unless its API contract is verified. |
 | Graphiti | `GRAPHITI_ENABLED`, `GRAPHITI_URL`, Neo4j fields | Install `requirements-graphiti-win-py312.lock.txt`, configure a graph database and an LLM/embedder, then allow only exact service origins |
-| MemPalace | `MEMPALACE_ENABLED`, `MEMPALACE_URL` | The adapter imports the official PyPI `mempalace` package. Version `3.10.0` is pinned in `requirements-mempalace.txt`; compatibility still needs an end-to-end test before calling this integration supported. |
+| MemPalace | `MEMPALACE_ENABLED`, `MEMPALACE_URL` | Optional and currently security-advisory affected: `mempalace==3.10.0` requires `chromadb>=1.5.4,<2`, and the pinned `chromadb==1.5.9` has four unique upstream advisories with no patched release listed. Link Memory's documented launcher does not start ChromaDB's HTTP server or MemPalace's MCP server; its adapter is loopback-only. This reduces network exposure but does not fix the dependency. See [SECURITY.md](SECURITY.md) before enabling it. |
 | OpenRouter model routing | `OPENROUTER_URL`, `OPENROUTER_API_KEY` | Optional third-party API; review its data terms, costs, and egress allowlist |
 
 ## Python extras and licensing notes
@@ -20,6 +20,7 @@ All adapter flags are `false` by default. The Gateway also denies remote egress 
 - The local reranker is optional and heavy: its pinned PyTorch/Sentence Transformers packages can consume substantial download and disk space. Keep it off on low-resource machines unless the user chooses it.
 - PyMuPDF is not in the default requirements. It is available under AGPL-3.0 or commercial terms; the project must select and satisfy the applicable terms before shipping or enabling PDF extraction in a commercial service.
 - MemPalace is published under MIT according to its official PyPI metadata and source project. Its direct version is now pinned; integration behavior remains unverified until a clean install and round-trip test pass.
+- The optional MemPalace lock includes ChromaDB 1.5.9 with unresolved upstream security advisories. Keep MemPalace disabled unless you accept that residual dependency risk; do not expose a separately launched ChromaDB server. See [SECURITY.md](SECURITY.md) for the affected ranges and current local launch-path controls.
 - LongMemory is not bundled because the source checkout lacks enough provenance to establish the exact revision and notices. Obtain it from its upstream, independently review its license and dependencies, and configure the compatible service URL.
 
 ## Local classification and model choice

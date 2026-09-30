@@ -1376,6 +1376,12 @@ def request_json(url: str, payload: dict[str, Any], timeout: float = 8.0) -> dic
             model_activity(activity_key, 1)
         try:
             try:
+                parsed_url = urllib.parse.urlsplit(url)
+            except (TypeError, ValueError):
+                raise ValueError("provider_invalid_request") from None
+            if parsed_url.scheme.lower() not in {"http", "https"} or not parsed_url.netloc:
+                raise ValueError("provider_invalid_request") from None
+            try:
                 request = urllib.request.Request(url, data=json_bytes(payload), headers={"Content-Type": "application/json"}, method="POST")
             except (TypeError, ValueError):
                 raise ValueError("provider_invalid_request") from None
@@ -1395,7 +1401,11 @@ def request_json(url: str, payload: dict[str, Any], timeout: float = 8.0) -> dic
                 if isinstance(reason, str) and reason.startswith("unknown url type:"):
                     raise ValueError("provider_invalid_request") from None
                 raise ValueError("provider_connection_error") from None
-            except (OSError, TypeError, ValueError):
+            except ValueError as exc:
+                if str(exc).startswith("unknown url type:"):
+                    raise ValueError("provider_invalid_request") from None
+                raise ValueError("provider_request_failed") from None
+            except (OSError, TypeError):
                 raise ValueError("provider_request_failed") from None
             try:
                 return json.loads(body) if body else {}
@@ -1604,6 +1614,12 @@ def vector_search(query: str, limit: int, kind: str | None = None) -> list[dict[
 
 
 def get_json(url: str, timeout: float = 1.5) -> dict[str, Any]:
+    try:
+        parsed_url = urllib.parse.urlsplit(url)
+        if parsed_url.scheme.lower() not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("service_invalid_request")
+    except (TypeError, ValueError):
+        raise ValueError("service_invalid_request") from None
     try:
         with urlopen_no_proxy_redirects(url, timeout=timeout) as response:
             body = response.read().decode("utf-8")
@@ -3122,15 +3138,16 @@ def provider_status() -> dict[str, Any]:
 
 
 def memory_layer_overview() -> dict[str, Any]:
-    """Expose the real topology and capabilities of the three memory layers.
+    """Expose the real topology and capabilities of the memory layers.
 
-    The providers do not call each other directly. The Gateway owns the
-    canonical memory event, fans it out to each adapter, and unifies recall
-    results. This explicit contract prevents duplicate writes and makes the
-    relationship/date joins visible to the dashboard.
+    The Gateway's local SQLite store is the canonical facts layer. Optional
+    providers do not call each other directly; the Gateway fans events out to
+    configured adapters and unifies their recall results.
     """
     status = provider_status()
     links = status.get("gateway", {}).get("provider_links", {})
+    with DB_LOCK:
+        local_memory_count = int(DB.execute("SELECT COUNT(*) FROM memories WHERE archived=0").fetchone()[0])
     with DB_LOCK:
         retrieval_stats = {row["provider"]: dict(row) for row in DB.execute("SELECT * FROM provider_retrieval_stats").fetchall()}
     for item in retrieval_stats.values():
@@ -3138,11 +3155,12 @@ def memory_layer_overview() -> dict[str, Any]:
         item["hit_rate_percent"] = round(int(item.get("hit_searches") or 0) * 100 / successful, 1) if successful else None
     layers = {
         "openmemory": {
-            "name": "OpenMemory", "role": "facts", "description": "حقائق وتفضيلات وقرارات قابلة للاسترجاع",
-            "capabilities": ["حقائق", "تفضيلات", "قرارات", "بحث دلالي", "تحديثات متدرجة"],
+            "name": "Link Memory local facts", "role": "facts", "description": "حقائق وتفضيلات وقرارات محفوظة محليًا في Gateway",
+            "capabilities": ["حقائق", "تفضيلات", "قرارات", "بحث محلي بالنص"],
             "accepts": "نص الذاكرة الموحّد مع النوع والوسوم والمصدر",
-            "returns": "حقائق وتفضيلات وقرارات مرتبة بالصلة والثقة",
+            "returns": "الحقائق النشطة المطابقة من قاعدة Gateway المحلية",
             "when_to_use": "عند سؤال المستخدم عن تفضيل أو قرار أو حقيقة مستقرة",
+            "local_count": local_memory_count,
             "link_counts": links.get("openmemory", {}), "retrieval_stats": retrieval_stats.get("openmemory", {}),
         },
         "graphiti": {
@@ -3162,15 +3180,24 @@ def memory_layer_overview() -> dict[str, Any]:
             "link_counts": links.get("mempalace", {}), "retrieval_stats": retrieval_stats.get("mempalace", {}),
         },
     }
+    layer_status = {key: status.get(key, {}) for key in layers}
+    gateway_facts = status.get("gateway", {})
+    layer_status["openmemory"] = {
+        "available": bool(gateway_facts.get("available")),
+        "state": "ready" if gateway_facts.get("available") else "unavailable",
+        "mode": "gateway-local",
+        "local_count": local_memory_count,
+        "optional_provider": status.get("openmemory", {}),
+    }
     return {
-        "ok": all(bool(status.get(key, {}).get("available")) for key in layers),
+        "ok": all(bool(layer_status.get(key, {}).get("available")) for key in layers),
         "topology": "gateway_fanout",
         "direct_provider_communication": False,
         "canonical_event": "Gateway memory event with shared memory_id, conversation_id, occurred_at, tags, and provenance",
-        "recall_contract": "Gateway queries all three in parallel, deduplicates by memory_id/content, then reranks bounded results",
+        "recall_contract": "Gateway searches its local facts and queries configured providers in parallel, deduplicates by memory_id/content, then reranks bounded results",
         "join_keys": ["memory_id", "conversation_id", "occurred_at", "source", "tags"],
         "layers": layers,
-        "status": {key: status.get(key, {}) for key in layers},
+        "status": layer_status,
     }
 
 

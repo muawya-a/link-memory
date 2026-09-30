@@ -215,7 +215,7 @@ export function Overview({ language, go }: { language: Lang; go: (p: Page) => vo
       </div>
       <div className="lp-service-list" aria-label={t(language, "حالة الخدمات", "Service states")}>
         {[
-          [t(language, "حفظ الحقائق والتفضيلات", "Save facts and preferences"), Boolean(providerHealth.openmemory?.available), providerHealth.openmemory?.state || "unavailable"],
+          [t(language, "حفظ الحقائق والتفضيلات محليًا", "Save facts and preferences locally"), Boolean(providerHealth.gateway?.available), providerHealth.gateway?.state || "unavailable"],
           [t(language, "ربط الأحداث والتواريخ", "Connect events and dates"), Boolean(providerHealth.graphiti?.available), providerHealth.graphiti?.state || "unavailable"],
           [t(language, "الرجوع إلى المحادثات", "Find original conversations"), Boolean(providerHealth.mempalace?.available), providerHealth.mempalace?.state || "unavailable"],
           [t(language, "البحث بحسب المعنى", "Search by meaning"), ["ready", "working"].includes(String(rec(d.models).embedding?.state)), rec(d.models).embedding?.state || "unavailable"],

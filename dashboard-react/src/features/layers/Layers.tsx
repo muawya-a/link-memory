@@ -36,11 +36,12 @@ export function Layers({ language }: { language: Lang }) {
   const layers = Object.entries(rec(data.layers));
   const layerStatuses = rec(data.status);
   const hasLayerStatus = Object.keys(layerStatuses).length > 0;
-  const openMemoryStore = rec(rec(rec(layerStatuses.openmemory).data).store);
+  const localFacts = rec(rec(data.layers).openmemory);
+  const localMemoryCount = Number.isFinite(Number(localFacts.local_count)) ? Number(localFacts.local_count) : null;
   const layerGuide: Record<string, { title: string; description: string; usefulFor: string }> = {
     openmemory: {
-      title: t(language, "حقائقك وسياق العمل", "Personal facts & working context"),
-      description: t(language, "يجمع الحقائق والتفضيلات والقرارات التي تساعد المساعد على تذكّر ما يخصك والإجابة بسياق مناسب.", "Keeps facts, preferences, and decisions so your assistant can remember what matters to you and answer with context."),
+      title: t(language, "حقائق Link Memory المحلية", "Link Memory local facts"),
+      description: t(language, "يحفظ Gateway الحقائق والتفضيلات والقرارات محليًا في قاعدة Link Memory. الموصل الخارجي للحقائق اختياري وغير مضمّن افتراضيًا.", "The Gateway stores facts, preferences, and decisions locally in Link Memory. The external facts adapter is optional and not bundled by default."),
       usefulFor: t(language, "عندما تسأل عن معلومة شخصية أو تفضيل سبق أن ذكرته.", "When you ask about a personal fact or preference you mentioned before."),
     },
     graphiti: {
@@ -111,12 +112,12 @@ export function Layers({ language }: { language: Lang }) {
       <section className="lp-retention-grid" aria-label={t(language, "أنواع الذاكرة", "Memory durations")}>
         <Card>
           <div className="lp-card-head">
-            <div><span className="lp-eyebrow">SHORT-TERM ROLE · WORKING CONTEXT</span><h2>{t(language, "سياق العمل الجاري", "Current working context")}</h2></div>
+            <div><span className="lp-eyebrow">LOCAL · GATEWAY FACTS</span><h2>{t(language, "قاعدة الحقائق المحلية", "Local facts store")}</h2></div>
             <Pill tone={layerStatuses.openmemory?.available ? "good" : "muted"}>{layerStatuses.openmemory?.available ? t(language, "متاحة", "Available") : t(language, "غير متاحة", "Unavailable")}</Pill>
           </div>
-          <p>{t(language, "سياق قصير الأمد يساعد على مواصلة المهمة الحالية. هذا وصف لوظيفته، وليس وعدًا بحذف تلقائي؛ النظام لا يعرض مدة انتهاء له.", "Short-term context helps continue the current task. This describes its role, not automatic deletion; the system does not report an expiry period.")}</p>
-          <div className="lp-retention-metric"><span>{t(language, "عناصر سياق العمل النشط", "Active working-context items")}</span><strong>{openMemoryStore.working_memory == null ? "—" : n(openMemoryStore.working_memory, language)}</strong></div>
-          <p className="lp-monitor-footnote">{t(language, "عدد العناصر الموجودة حاليًا في سياق العمل؛ لا يعني أنها ستحذف تلقائيًا.", "Current items in working context; this does not mean they will be deleted automatically.")}</p>
+          <p>{t(language, "هذه هي قاعدة الحقائق الأساسية، وتعمل محليًا حتى لو لم يُثبّت الموصل الخارجي الاختياري.", "This is the canonical facts store and runs locally even when the optional external adapter is not installed.")}</p>
+          <div className="lp-retention-metric"><span>{t(language, "ذكريات محلية نشطة", "Active local memories")}</span><strong>{localMemoryCount == null ? "—" : n(localMemoryCount, language)}</strong></div>
+          <p className="lp-monitor-footnote">{t(language, "لا يعني هذا العدد وجود نسخة في أي خدمة خارجية.", "This count does not imply a copy exists in an external service.")}</p>
         </Card>
         <Card>
           <div className="lp-card-head">
@@ -158,11 +159,11 @@ export function Layers({ language }: { language: Lang }) {
               <details className="lp-layer-usage">
                 <summary>{t(language, "تفاصيل النشاط", "Activity details")}</summary>
                 <div className="lp-layer-stat-row">
-                  <div><span>{t(language, "سجلات حفظ ناجحة", "Successful saves")}</span><strong>{n(sent, language)}</strong></div>
-                  <div><span>{t(language, "بانتظار الإكمال", "Still in progress")}</span><strong>{n(failed + queued, language)}</strong></div>
+                  <div><span>{t(language, id === "openmemory" ? "حفظ في الموصل الخارجي الاختياري" : "سجلات حفظ ناجحة", id === "openmemory" ? "Saves to optional external adapter" : "Successful saves")}</span><strong>{n(sent, language)}</strong></div>
+                  <div><span>{t(language, id === "openmemory" ? "عمليات الموصل المعلّقة" : "بانتظار الإكمال", id === "openmemory" ? "External adapter operations pending" : "Still in progress")}</span><strong>{n(failed + queued, language)}</strong></div>
                   <div title={t(language, "نسبة عمليات البحث الناجحة التي أعادت نتيجة من هذه الطبقة", "Share of successful searches that returned a result from this layer")}><span>{t(language, "بحث وجد معلومة", "Searches with a match")}</span><strong>{hitRate == null ? "—" : `${n(hitRate, language)}%`}</strong><small>{n(retrieval.hit_searches, language)} / {n(retrieval.successful_searches, language)} {t(language, "بحثًا", "searches")}</small></div>
                 </div>
-                <p className="lp-monitor-footnote">{total === 0 ? t(language, "لا توجد سجلات حفظ لهذه الطبقة بعد.", "There are no save records for this layer yet.") : t(language, "الأرقام تخص هذه الطبقة؛ قد تُحفظ المعلومة نفسها في أكثر من طبقة، فلا تجمع الأعداد بوصفها معلومات منفردة.", "These figures belong to this layer; the same memory may be saved in more than one layer, so do not add them as unique memories.")}</p>
+                <p className="lp-monitor-footnote">{id === "openmemory" ? t(language, "هذه الأرقام تخص الموصل الخارجي فقط؛ قاعدة الحقائق المحلية تعمل بصورة مستقلة.", "These numbers describe only the external adapter; the local facts store works independently.") : total === 0 ? t(language, "لا توجد سجلات حفظ لهذه الطبقة بعد.", "There are no save records for this layer yet.") : t(language, "الأرقام تخص هذه الطبقة؛ قد تُحفظ المعلومة نفسها في أكثر من طبقة، فلا تجمع الأعداد بوصفها معلومات منفردة.", "These figures belong to this layer; the same memory may be saved in more than one layer, so do not add them as unique memories.")}</p>
               </details>
             </Card>
           );

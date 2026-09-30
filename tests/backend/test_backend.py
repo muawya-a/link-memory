@@ -350,7 +350,10 @@ def assert_provider_health_dtos_are_projected(server, base: str) -> None:
         assert health["ollama"]["warmup"]["error"] == "provider_reported_failure"
         assert status["providers"]["mempalace"]["enabled"] is True
         assert recall["providers"]["openmemory"]["data"]["store"]["working_memory"] == 7
-        assert layers["status"]["openmemory"]["data"]["store"]["working_memory"] == 7
+        assert layers["status"]["openmemory"]["available"] is True
+        assert layers["status"]["openmemory"]["mode"] == "gateway-local"
+        assert layers["status"]["openmemory"]["optional_provider"]["data"]["store"]["working_memory"] == 7
+        assert layers["layers"]["openmemory"]["name"] == "Link Memory local facts"
         assert layers["status"]["mempalace"]["available"] is True
     finally:
         for name, value in original.items():
@@ -756,13 +759,13 @@ def main() -> None:
         client_configs = mcp_status["client_configs"]
         codex_config = client_configs["codex"]
         assert codex_config["format"] == "toml" and codex_config["filename"] == "link-memory-mcp-snippet.toml"
-        codex_snippet = tomllib.loads(codex_config["content"])["mcp_servers"]["link-memory-memory"]
+        codex_snippet = tomllib.loads(codex_config["content"])["mcp_servers"]["link-memory"]
         claude_config = client_configs["claude_code"]
         assert claude_config["format"] == "json" and claude_config["filename"] == "link-memory.mcp.json"
         claude_json = json.loads(claude_config["content"])
         assert set(claude_json) == {"mcpServers"}
-        claude_snippet = claude_json["mcpServers"]["link-memory-memory"]
-        shared_config = mcp_status["config"]["mcpServers"]["link-memory-memory"]
+        claude_snippet = claude_json["mcpServers"]["link-memory"]
+        shared_config = mcp_status["config"]["mcpServers"]["link-memory"]
         assert {key: codex_snippet[key] for key in ("command", "args", "cwd", "env")} == shared_config
         assert set(claude_snippet) == {"command", "args", "env"}
         assert {key: claude_snippet[key] for key in ("command", "args", "env")} == {
@@ -1000,13 +1003,16 @@ def main() -> None:
             assert mcp_process.returncode == 0, f"MCP round-trip process failed: {mcp_stderr[-500:]}"
             mcp_initialize = next(response["result"] for response in mcp_responses if response.get("id") == 1)
             mcp_tools = next(response["result"]["tools"] for response in mcp_responses if response.get("id") == 4)
-            assert mcp_initialize["serverInfo"]["name"] == "memory-gateway"
+            assert mcp_initialize["serverInfo"]["name"] == "link-memory"
             assert {"memory_remember", "memory_recall"} <= {tool["name"] for tool in mcp_tools}
             mcp_write = next(response["result"]["structuredContent"] for response in mcp_responses if response.get("id") == 2)
             mcp_read = next(response["result"]["structuredContent"] for response in mcp_responses if response.get("id") == 3)
-            written_memory_id = mcp_write["memory"]["id"]
-            assert mcp_write["status"] == "saved" and mcp_write["memory"]["source"] == "mcp"
-            assert any(memory.get("id") == written_memory_id for memory in mcp_read["memories"]), "MCP memory_recall must read back the memory written through MCP"
+            assert mcp_write == {"status": "saved"}, "MCP remember should return only its privacy-safe status"
+            assert any(
+                memory.get("text") == "Synthetic MCP round-trip marker for desktop clients."
+                and memory.get("source") == "mcp"
+                for memory in mcp_read["memories"]
+            ), "MCP memory_recall must read back the memory written through MCP"
 
             synthetic_failure_server = ThreadingHTTPServer(("127.0.0.1", 0), SyntheticFailureHandler)
             synthetic_failure_thread = threading.Thread(target=synthetic_failure_server.serve_forever, daemon=True)
