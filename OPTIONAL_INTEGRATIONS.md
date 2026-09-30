@@ -29,4 +29,8 @@ All adapter flags are `false` by default. The Gateway also denies remote egress 
 - Graphiti is an optional relation/event layer, not a low-resource default. It requires a graph database and an embedding/LLM configuration; choose local endpoints if all processing must stay on the device.
 - MemPalace is the optional transcript/archive layer. The Gateway's existing OpenMemory-compatible fact-layer endpoint is a separate adapter contract; “OpenMemory” currently refers to multiple unrelated repositories, so do not substitute a project based on its name alone.
 
+## Inspecting a compatible model API
+
+The Settings page has an explicit **Discover a compatible API** action. It supports the OpenAI-compatible `GET /models` catalog shape for inspection only. It does not configure inference, route memories, or make arbitrary REST/vendor-specific APIs compatible. Local loopback endpoints can be inspected without remote egress; a non-loopback host requires `MEMORY_GATEWAY_REMOTE_EGRESS_ENABLED=true` and that exact HTTPS origin in `MEMORY_GATEWAY_EGRESS_ALLOWLIST`. The API key field is optional, is sent only when the user clicks the action, is not saved, and is cleared from the form afterward. See [the discovery contract](PROVIDER_API_DISCOVERY.md) for the response classification and privacy boundary.
+
 These integrations are preserved as source capabilities, but they have not all been verified end-to-end in this public draft. Do not read the presence of a settings toggle as evidence that a remote service is installed or that its privacy, licensing, and failure behavior has passed validation.

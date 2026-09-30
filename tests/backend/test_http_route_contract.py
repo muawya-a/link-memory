@@ -297,6 +297,37 @@ class HttpRouteContractTests(unittest.TestCase):
         self.assertEqual(services.events[1], ("openrouter_catalog", True))
         self.assertEqual(handler.responses, [({"error": "model catalog unavailable"}, 503)])
 
+    def test_provider_discovery_requires_auth_before_reading_secret_body(self):
+        handler = FakeHandler(
+            path="/v1/provider/discover",
+            payload={"base_url": "https://provider.example/v1", "api_key": "synthetic-secret"},
+            authenticated=False,
+        )
+        services = FakeServices(auth_ok=False)
+
+        http_routes.handle_post(handler, services)
+
+        self.assertEqual(call_events(services), ["auth_ok"])
+        self.assertNotIn(("read_json",), handler.events)
+        self.assertEqual(handler.responses, [({"error": "unauthorized"}, 401)])
+
+    def test_provider_discovery_route_forwards_only_explicit_catalog_inputs(self):
+        handler = FakeHandler(
+            path="/v1/provider/discover",
+            payload={"base_url": "http://127.0.0.1:11434/v1", "api_key": "synthetic-key"},
+        )
+        services = FakeServices(returns={"discover_openai_compatible_models": {"compatible": True, "kind": "single_model_catalog"}})
+
+        http_routes.handle_post(handler, services)
+
+        self.assertEqual(call_events(services), ["auth_ok", "discover_openai_compatible_models"])
+        self.assertEqual(handler.events[0], ("read_json",))
+        self.assertEqual(
+            services.events[-1],
+            ("discover_openai_compatible_models", "http://127.0.0.1:11434/v1", "synthetic-key"),
+        )
+        self.assertEqual(handler.responses, [({"compatible": True, "kind": "single_model_catalog"}, 200)])
+
     def test_unknown_get_route_authenticates_then_returns_not_found(self):
         handler = FakeHandler()
         services = FakeServices()

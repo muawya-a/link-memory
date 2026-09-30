@@ -38,11 +38,13 @@ if __package__:
     from . import http_routes, local_hook_context
     from .network_policy import assert_gateway_bind_host
     from .outbound_http import urlopen_no_proxy_redirects
+    from .provider_discovery import discover_openai_compatible_models
 else:
     import http_routes
     import local_hook_context
     from network_policy import assert_gateway_bind_host
     from outbound_http import urlopen_no_proxy_redirects
+    from provider_discovery import discover_openai_compatible_models
 
 
 def load_local_env() -> None:

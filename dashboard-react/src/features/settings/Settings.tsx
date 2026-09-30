@@ -41,6 +41,11 @@ export function Settings({ language }: { language: Lang }) {
   });
   const [selected, setSelected] = useState("");
   const [key, setKey] = useState("");
+  const [discoveryBaseUrl, setDiscoveryBaseUrl] = useState("");
+  const [discoveryKey, setDiscoveryKey] = useState("");
+  const [discoveryResult, setDiscoveryResult] = useState<R>({});
+  const [discoveryBusy, setDiscoveryBusy] = useState(false);
+  const [discoveryNotice, setDiscoveryNotice] = useState("");
   const [externalIngestConsent, setExternalIngestConsent] = useState(false);
   const [savedExternalIngestConsent, setSavedExternalIngestConsent] = useState(false);
   const [externalIngestConsentApiState, setExternalIngestConsentApiState] = useState<"loading" | "ready" | "unsupported" | "unavailable">("loading");
@@ -262,6 +267,39 @@ export function Settings({ language }: { language: Lang }) {
     } finally {
       setKey("");
       setCatalogBusy(false);
+    }
+  };
+  const discoverCompatibleApi = async () => {
+    setDiscoveryBusy(true);
+    setDiscoveryNotice("");
+    setDiscoveryResult({});
+    const requestKey = discoveryKey;
+    try {
+      const result = rec(await post("/v1/provider/discover", {
+        base_url: discoveryBaseUrl.trim(),
+        ...(requestKey ? { api_key: requestKey } : {}),
+      }));
+      setDiscoveryResult(result);
+      setDiscoveryNotice(t(language, "اكتمل فحص كتالوج النماذج فقط؛ لم يُرسل أي طلب استدلال.", "Model catalog check completed; no inference request was sent."));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      const message = code === "provider_base_url_invalid" || code === "provider_base_url_must_be_api_root"
+        ? t(language, "تحقق من عنوان API؛ أدخل الجذر مثل https://provider.example/v1 دون مفتاح داخل الرابط.", "Check the API root, for example https://provider.example/v1. Do not put a key in the URL.")
+        : code === "provider_api_key_invalid"
+          ? t(language, "صيغة مفتاح API غير صالحة.", "The API key format is invalid.")
+          : code === "provider_catalog_not_openai_compatible"
+            ? t(language, "الرد لا يطابق صيغة كتالوج OpenAI-compatible المتوقعة.", "The response does not match the expected OpenAI-compatible catalog format.")
+            : code === "provider_catalog_too_large"
+              ? t(language, "رد الكتالوج أكبر من الحد المسموح.", "The catalog response exceeds the allowed size.")
+              : code === "outbound_destination_denied" || code === "outbound_egress_disabled" || code === "outbound_allowlist_invalid"
+                ? t(language, "حظر Gateway هذا العنوان. العناوين البعيدة تحتاج HTTPS وسماحًا صريحًا في إعداد Gateway.", "The Gateway blocked this destination. Remote endpoints require HTTPS and explicit Gateway approval.")
+                : code === "provider_catalog_unavailable" || code.startsWith("provider_catalog_http_")
+                  ? t(language, "تعذر الوصول إلى الكتالوج. تحقق من العنوان أو صلاحية المفتاح.", "Could not reach the catalog. Check the address or key.")
+                  : t(language, "تعذر فحص هذا الكتالوج.", "Could not inspect this catalog.");
+      setDiscoveryNotice(message);
+    } finally {
+      setDiscoveryKey("");
+      setDiscoveryBusy(false);
     }
   };
   const testProviderConnection = async () => {
@@ -500,6 +538,61 @@ export function Settings({ language }: { language: Lang }) {
             )}
           </p>
         )}
+        <details className="lp-settings-advanced">
+          <summary>{t(language, "استكشاف API متوافق", "Discover a compatible API")}</summary>
+          <p className="lp-muted">
+            {t(language, "يدعم هذا الفحص صيغة كتالوج OpenAI-compatible فقط. عند الضغط، يرسل Gateway طلب GET /models إلى العنوان الذي أدخلته. لا يرسل ذكريات ولا يجرب التوليد ولا يحفظ العنوان أو المفتاح. إن أدخلت مفتاحًا، يمر عبر Gateway الحالي إلى ذلك العنوان. العناوين البعيدة تحتاج سماحًا صريحًا في إعداد Gateway.", "This check supports only the OpenAI-compatible model catalog shape. When you click, the Gateway sends GET /models to the address you entered. It sends no memories, does not test generation, and does not save the address or key. If you enter a key, it passes through the current Gateway to that address. Remote endpoints require explicit Gateway egress approval.")}
+          </p>
+          <div className="lp-provider-grid">
+            <label className="lp-form-label">
+              {t(language, "عنوان API الموثوق", "Trusted API root")}
+              <input
+                type="url"
+                dir="ltr"
+                value={discoveryBaseUrl}
+                onChange={(event) => {
+                  setDiscoveryBaseUrl(event.target.value);
+                  setDiscoveryResult({});
+                  setDiscoveryNotice("");
+                }}
+                placeholder="http://127.0.0.1:11434/v1"
+                autoComplete="url"
+              />
+            </label>
+            <label className="lp-form-label">
+              {t(language, "مفتاح API اختياري", "Optional API key")}
+              <input
+                type="password"
+                dir="ltr"
+                value={discoveryKey}
+                onChange={(event) => setDiscoveryKey(event.target.value)}
+                placeholder={t(language, "يُرسل لهذا العنوان عند الفحص فقط", "Sent to this address for discovery only")}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+          <div className="lp-actions">
+            <Button variant="secondary" disabled={discoveryBusy || !discoveryBaseUrl.trim()} onClick={() => void discoverCompatibleApi()}>
+              <RefreshCw size={17} className={discoveryBusy ? "lp-spin" : ""} />
+              {discoveryBusy ? t(language, "يفحص الكتالوج…", "Checking catalog…") : t(language, "فحص كتالوج النماذج", "Inspect model catalog")}
+            </Button>
+          </div>
+          {discoveryNotice && <p className="lp-muted" role="status" aria-live="polite">{discoveryNotice}</p>}
+          {discoveryResult.compatible === true && (
+            <div className="lp-provider-status" role="status" aria-live="polite">
+              <Pill tone="good">{
+                discoveryResult.kind === "empty_catalog"
+                  ? t(language, "كتالوج فارغ", "Empty catalog")
+                  : discoveryResult.kind === "single_model_catalog"
+                    ? t(language, "الكتالوج يعرض نموذجًا واحدًا", "Catalog lists one model")
+                    : t(language, "الكتالوج يعرض عدة نماذج", "Catalog lists multiple models")
+              }</Pill>
+              <span className="lp-muted">{n(discoveryResult.model_count, language)} {t(language, "معرّف نموذج في رد الكتالوج", "model IDs in the catalog response")}</span>
+              <span className="lp-muted">{arr(discoveryResult.models).slice(0, 20).map((item) => String(rec(item).id || "")).filter(Boolean).join(" · ")}{Number(discoveryResult.model_count) > 20 ? " · …" : ""}</span>
+              {discoveryResult.truncated === true && <span className="lp-muted">{t(language, "عُرضت أول 500 نتيجة فقط.", "Only the first 500 results were inspected.")}</span>}
+            </div>
+          )}
+        </details>
         <div className="lp-local-tools-note lp-provider-consent">
             <label>
               <input

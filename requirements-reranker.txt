@@ -1,3 +1,7 @@
 # Optional local cross-encoder. Heavy; do not install for the low-resource default.
 torch==2.14.0
 sentence-transformers==6.1.0
+# Security floors for transitive dependencies flagged by pip-audit.
+certifi>=2024.7.4
+idna>=3.15
+setuptools>=83.0.0

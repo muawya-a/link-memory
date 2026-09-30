@@ -356,6 +356,7 @@ def main() -> None:
                 )
                 consent_saves: list[dict[str, object]] = []
                 provider_config_saves: list[dict[str, object]] = []
+                provider_discovery_requests: list[dict[str, object]] = []
                 page.route(
                     "**/v1/openrouter/status",
                     lambda route: route.fulfill(
@@ -392,6 +393,24 @@ def main() -> None:
                             status=200,
                             content_type="application/json",
                             body=json.dumps({"configured": True}),
+                        ),
+                    ),
+                )
+                page.route(
+                    "**/v1/provider/discover",
+                    lambda route: (
+                        provider_discovery_requests.append(json.loads(route.request.post_data or "{}")),
+                        route.fulfill(
+                            status=200,
+                            content_type="application/json",
+                            body=json.dumps({
+                                "compatible": True,
+                                "kind": "single_model_catalog",
+                                "endpoint_kind": "openai_compatible_models",
+                                "model_count": 1,
+                                "truncated": False,
+                                "models": [{"id": "synthetic-local-model"}],
+                            }),
                         ),
                     ),
                 )
@@ -458,6 +477,19 @@ def main() -> None:
 
                 if viewport_name == "desktop" and settings_consent_only:
                     expect(page.locator(".lp-sidebar")).to_be_visible()
+                    page.get_by_text("استكشاف API متوافق", exact=True).click()
+                    page.get_by_label("عنوان API الموثوق").fill("http://127.0.0.1:11434/v1")
+                    discovery_key = page.get_by_label("مفتاح API اختياري")
+                    discovery_key.fill("synthetic-discovery-key")
+                    visible_button(page, "فحص كتالوج النماذج").click()
+                    expect(page.get_by_text("اكتمل فحص كتالوج النماذج فقط؛ لم يُرسل أي طلب استدلال.", exact=True)).to_be_visible()
+                    expect(page.get_by_text("الكتالوج يعرض نموذجًا واحدًا", exact=True)).to_be_visible()
+                    assert provider_discovery_requests == [{
+                        "base_url": "http://127.0.0.1:11434/v1",
+                        "api_key": "synthetic-discovery-key",
+                    }]
+                    assert discovery_key.input_value() == "", "discovery key must be cleared after the request"
+                    report["actions"]["compatible_api_discovery_is_read_only_and_ephemeral"] = "passed"
                     consent_label_ar = "أوافق على تحليل الالتقاط المباشر عبر OpenRouter"
                     consent_label_en = "Allow direct capture analysis through OpenRouter"
                     consent_checkbox = page.get_by_role("checkbox", name=consent_label_ar)

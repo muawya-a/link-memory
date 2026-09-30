@@ -287,6 +287,8 @@ def handle_post(handler, services):
                 handler.send_json(services.configure_external_ingest_consent(payload))
             elif path == "/v1/provider/catalog":
                 handler.send_json(services.provider_model_catalog(payload.get("provider"), payload.get("api_key")))
+            elif path == "/v1/provider/discover":
+                handler.send_json(services.discover_openai_compatible_models(payload.get("base_url"), payload.get("api_key", "")))
             elif path == "/v1/provider/test":
                 handler.send_json(services.test_provider_connection(payload.get("provider"), payload.get("api_key", "")))
             elif path == "/v1/models/config":
