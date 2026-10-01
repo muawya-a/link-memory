@@ -79,6 +79,9 @@ $pythonPathEntries = @(Get-Content -LiteralPath $pythonPathFile.FullName)
 if ($pythonPathEntries -notcontains '..') {
   Add-Content -LiteralPath $pythonPathFile.FullName -Value '..' -Encoding Ascii
 }
+if ($pythonPathEntries -notcontains '..\gateway') {
+  Add-Content -LiteralPath $pythonPathFile.FullName -Value '..\gateway' -Encoding Ascii
+}
 
 $rootFiles = @(
   '.env.example', 'CLIENT_INTEGRATIONS.md', 'DEPENDENCY_LICENSE_INVENTORY.csv',
@@ -96,3 +99,4 @@ foreach ($file in $rootFiles | Sort-Object -Unique) {
 }
 
 Write-Output "Staged Link Memory for Windows installer: $StageRoot"
+

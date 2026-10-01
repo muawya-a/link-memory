@@ -70,7 +70,7 @@ jobs:
           $env:PYTHONDONTWRITEBYTECODE = '1'
           Push-Location $stage
           try {
-            & (Join-Path $stage 'runtime\python.exe') -c "import sys; sys.path.insert(0, '.'); import dashboard.serve, gateway.server; print('Gateway and dashboard imports succeeded.')"
+            & (Join-Path $stage 'runtime\python.exe') -c "import dashboard.serve, gateway.server, http_routes; print('Gateway and dashboard imports succeeded.')"
             if ($LASTEXITCODE -ne 0) { throw 'The bundled runtime could not import the local Gateway and dashboard.' }
           } finally {
             Pop-Location
