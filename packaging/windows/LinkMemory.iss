@@ -37,11 +37,12 @@ Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"
-Name: "{autoprograms}\Stop {#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """"{app}\Stop-Link-Memory.vbs""""; WorkingDir: "{app}"
+Name: "{autoprograms}\Stop {#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\Stop-Link-Memory.vbs"""; WorkingDir: "{app}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"; Description: "Launch {#AppName}"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\wscript.exe"; Parameters: """"{app}\Stop-Link-Memory.vbs""""; WorkingDir: "{app}"
+Filename: "{sys}\wscript.exe"; Parameters: """{app}\Stop-Link-Memory.vbs"""; WorkingDir: "{app}"
+
