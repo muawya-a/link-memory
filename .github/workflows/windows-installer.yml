@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - codex/windows-installer-preview-20261001
+      - windows-installer-preview-20261001
 
 permissions:
   contents: read
