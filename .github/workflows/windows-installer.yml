@@ -112,24 +112,37 @@ jobs:
             $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
             Start-Process -FilePath $powershell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ('"' + $launcher + '"')) -WorkingDirectory $installRoot -WindowStyle Hidden | Out-Null
             $ready = $false
-            $lastProbeError = 'No response received.'
+            $lastGatewayProbe = 'No response received.'
+            $lastDashboardProbe = 'No response received.'
             for ($attempt = 0; $attempt -lt 30; $attempt++) {
               try {
                 $gateway = Invoke-RestMethod -Uri 'http://127.0.0.1:18000/health' -TimeoutSec 2
+                $lastGatewayProbe = "HTTP response; ok=$($gateway.ok)."
+              } catch { $lastGatewayProbe = $_.Exception.Message }
+              try {
                 $dashboard = Invoke-WebRequest -Uri 'http://127.0.0.1:18765/react/' -TimeoutSec 2
-                if ($gateway.ok -and $dashboard.StatusCode -eq 200) { $ready = $true; break }
-                $lastProbeError = "Gateway ok=$($gateway.ok); dashboard status=$($dashboard.StatusCode)."
-              } catch { $lastProbeError = $_.Exception.Message }
+                $lastDashboardProbe = "HTTP $($dashboard.StatusCode)."
+              } catch { $lastDashboardProbe = $_.Exception.Message }
+              if ($lastGatewayProbe -eq 'HTTP response; ok=True.' -and $lastDashboardProbe -eq 'HTTP 200.') { $ready = $true; break }
               Start-Sleep -Seconds 1
             }
             if (-not $ready) {
-              Write-Output "Last local service probe: $lastProbeError"
+              Write-Output "Last Gateway probe: $lastGatewayProbe"
+              Write-Output "Last dashboard probe: $lastDashboardProbe"
               Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
                 Where-Object { $_.CommandLine -and $_.CommandLine.Contains($installRoot) } |
                 Select-Object Name, ProcessId, CommandLine | Format-Table -AutoSize | Out-String | Write-Output
               $dataPath = Join-Path $env:LOCALAPPDATA 'Link Memory\data'
               Get-ChildItem -LiteralPath $dataPath -Force -ErrorAction SilentlyContinue |
                 Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize | Out-String | Write-Output
+              $logPath = Join-Path $dataPath 'logs'
+              foreach ($log in @('gateway.stdout.log', 'gateway.stderr.log', 'dashboard.stdout.log', 'dashboard.stderr.log')) {
+                $logFile = Join-Path $logPath $log
+                if (Test-Path -LiteralPath $logFile) {
+                  Write-Output "--- $log ---"
+                  Get-Content -LiteralPath $logFile -Tail 60
+                }
+              }
               throw 'The installed app did not serve both the Gateway health check and dashboard.'
             }
             Write-Output 'Installer smoke test passed: bundled Python, Gateway health, and dashboard HTTP.'
