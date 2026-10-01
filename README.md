@@ -4,7 +4,7 @@
 
 Link Memory is a desktop-first memory workspace that captures, organizes, and retrieves useful context from conversations. This repository contains the self-hosted/local prototype, including its Gateway, dashboard, import tools, MCP server, optional hooks, and optional memory-provider adapters.
 
-> **Release status:** The Windows installer is still in preview review. There is no stable installer in [GitHub Releases](https://github.com/muawya-a/link-memory/releases) yet. The preview build is available from the [installer workflow run](https://github.com/muawya-a/link-memory/actions/runs/36825684058) as a temporary artifact; download `LinkMemory-Windows-Installer`, extract it, then run the setup executable. Preview artifacts expire, and this executable is not digitally signed yet.
+> **Release status:** The Windows installer is still in preview review. There is no stable installer in [GitHub Releases](https://github.com/muawya-a/link-memory/releases) yet. The preview build is available from the [Windows installer workflow](https://github.com/muawya-a/link-memory/actions/workflows/windows-installer.yml) as a temporary artifact. Open the latest successful run, download `LinkMemory-Windows-Installer`, extract it, then run the setup executable. Preview artifacts expire, and this executable is not digitally signed yet.
 
 The project is provided under the Apache License 2.0; see [LICENSE](LICENSE) and [source provenance](SOURCE_PROVENANCE.md). Third-party components retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [the dependency license inventory](DEPENDENCY_LICENSE_INVENTORY.csv). The inventory records package metadata declarations; it is not a legal opinion.
 
