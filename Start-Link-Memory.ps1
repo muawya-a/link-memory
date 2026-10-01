@@ -20,7 +20,12 @@ if (Test-Path -LiteralPath $GatewayScript) {
 if (Test-Path -LiteralPath $StartScript) {
   $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
   if (-not $pwsh) { $pwsh = (Get-Command powershell.exe -ErrorAction Stop).Source }
-  Start-Process -FilePath $pwsh -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $StartScript) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
+  $startArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $StartScript)
+  $bundledPython = Join-Path $Root 'runtime\python.exe'
+  if (Test-Path -LiteralPath $bundledPython -PathType Leaf) {
+    $startArguments += @('-PythonPath', $bundledPython)
+  }
+  Start-Process -FilePath $pwsh -ArgumentList $startArguments -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
 }
 
 Start-Process 'http://127.0.0.1:18765/react/#overview'

@@ -10,7 +10,12 @@ function Get-LinkProfilePlan {
     $gatewayPort = 28000
     $dashboardPort = 28765
   } else {
-    $dataRoot = Join-Path $root 'data'
+    $bundledRuntime = Join-Path $root 'runtime\python.exe'
+    if ((Test-Path -LiteralPath $bundledRuntime -PathType Leaf) -and $env:LOCALAPPDATA) {
+      $dataRoot = Join-Path $env:LOCALAPPDATA 'Link Memory\data'
+    } else {
+      $dataRoot = Join-Path $root 'data'
+    }
     $gatewayPort = 18000
     $dashboardPort = 18765
   }

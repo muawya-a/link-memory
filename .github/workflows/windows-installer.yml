@@ -1,0 +1,96 @@
+name: Windows installer preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/windows-installer-preview-20261001
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-installer:
+    name: Build per-user Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python for build
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.16"
+
+      - name: Set up Node.js for dashboard build
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard-react/package-lock.json
+
+      - name: Build the dashboard
+        shell: pwsh
+        run: |
+          npm ci --prefix dashboard-react
+          npm run build --prefix dashboard-react
+
+      - name: Download and verify the bundled Python runtime
+        shell: pwsh
+        run: |
+          $version = '3.13.16'
+          $expectedSha256 = 'd1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf'
+          $archive = Join-Path $env:RUNNER_TEMP "python-$version-embed-amd64.zip"
+          $runtime = Join-Path $env:RUNNER_TEMP "link-memory-python-runtime-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $url = "https://www.python.org/ftp/python/$version/python-$version-embed-amd64.zip"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) { throw 'The Python runtime SHA-256 does not match the pinned python.org release checksum.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath $runtime
+          if (-not (Test-Path -LiteralPath (Join-Path $runtime 'LICENSE.txt') -PathType Leaf)) { throw 'The Python archive does not contain LICENSE.txt.' }
+          & (Join-Path $runtime 'python.exe') -c "import sqlite3, sys; print(sys.version); print(sqlite3.sqlite_version)"
+          if ($LASTEXITCODE -ne 0) { throw 'The bundled Python runtime failed its standard-library startup check.' }
+          "PYTHON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Prepare a clean install tree
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "link-memory-stage-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          & .\packaging\windows\build-stage.ps1 -StageRoot $stage -PythonRuntimeRoot $env:PYTHON_RUNTIME_ROOT
+          Push-Location $stage
+          try {
+            & (Join-Path $stage 'runtime\python.exe') -c "import sys; sys.path.insert(0, '.'); import dashboard.serve, gateway.server; print('Gateway and dashboard imports succeeded.')"
+            if ($LASTEXITCODE -ne 0) { throw 'The bundled runtime could not import the local Gateway and dashboard.' }
+          } finally {
+            Pop-Location
+          }
+          "LINK_MEMORY_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw 'Inno Setup compiler was not found after installation.' }
+          $output = Join-Path $env:RUNNER_TEMP "link-memory-installer-output-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          & $compiler "/DStageDir=$env:LINK_MEMORY_STAGE" "/DOutputDir=$output" .\packaging\windows\LinkMemory.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
+          "LINK_MEMORY_INSTALLER_OUTPUT=$output" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LinkMemory-Windows-Installer
+          path: ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.exe
+          if-no-files-found: error
+          retention-days: 14
