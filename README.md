@@ -4,7 +4,7 @@
 
 Link Memory is a desktop-first memory workspace that captures, organizes, and retrieves useful context from conversations. This repository contains the self-hosted/local prototype, including its Gateway, dashboard, import tools, MCP server, optional hooks, and optional memory-provider adapters.
 
-> **Release status:** The Windows installer is still in preview review. There is no stable installer in [GitHub Releases](https://github.com/muawya-a/link-memory/releases) yet. The preview build is available from the [Windows installer workflow](https://github.com/muawya-a/link-memory/actions/workflows/windows-installer.yml) as a temporary artifact. Open the latest successful run, download `LinkMemory-Windows-Installer`, extract it, then run the setup executable. Preview artifacts expire, and this executable is not digitally signed yet.
+> **Current release:** Download the Windows x64 installer from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest). The first installer is not digitally signed, so Windows may display a SmartScreen warning. Review the source, release notes, and security guidance before installing.
 
 The project is provided under the Apache License 2.0; see [LICENSE](LICENSE) and [source provenance](SOURCE_PROVENANCE.md). Third-party components retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [the dependency license inventory](DEPENDENCY_LICENSE_INVENTORY.csv). The inventory records package metadata declarations; it is not a legal opinion.
 
@@ -22,14 +22,14 @@ The default launcher binds local services to loopback and does not enable extern
 
 ## Install the Windows app
 
-When a verified Windows installer appears under [GitHub Releases](https://github.com/muawya-a/link-memory/releases), download `LinkMemory-Setup-*.exe`, run it, and launch Link Memory from the Start menu. It is designed to install per-user and bundle the Python runtime and prebuilt dashboard, so Python, Node.js, and a terminal are not needed. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The installer build is being checked on a dedicated preview branch; no verified installer Release is published yet. Until then, use the source setup below only if you are comfortable running developer setup steps.
+Download `LinkMemory-Setup-*.exe` from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest), run it, then launch Link Memory from the Start menu. It installs per-user and bundles the Python runtime and prebuilt dashboard, so Python, Node.js, and a terminal are not needed. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The executable is unsigned; Windows may show a SmartScreen warning. Use the source setup below only for development.
 
 The app stores installed runtime data under `%LOCALAPPDATA%\Link Memory\data`, separately from the program files. The installer is designed to preserve this data folder during uninstall.
 
 ## Requirements
 
-- The packaged Windows installer (when published under GitHub Releases) includes a bundled per-user Python runtime and a prebuilt dashboard; it does not require users to install Python or Node.js.
-- The repository currently has no published installer release. The source-download route below is a developer setup and still requires Python and Node.js.
+- The Windows x64 installer includes a bundled per-user Python runtime and a prebuilt dashboard; it does not require users to install Python or Node.js.
+- The source-download route below is for developers and requires Python and Node.js.
 - Windows 10 or 11 for the supplied PowerShell launcher.
 - Python 3.10 or later.
 - Node.js 20 or later and npm to build the dashboard.
@@ -37,7 +37,7 @@ The app stores installed runtime data under `%LOCALAPPDATA%\Link Memory\data`, s
 
 ## Install from source on Windows
 
-Use this route for development or until a packaged installer is published. The installer preview branch is being built and checked by maintainers; no installer has been published as a GitHub Release.
+Use this route for development or when you want to build from source.
 
 1. Install Python 3.10 or later and Node.js 20 or later from their official sources.
 2. Download or clone this repository. Do not place private conversation exports inside the project folder.
