@@ -20,10 +20,10 @@ if (Test-Path -LiteralPath $GatewayScript) {
 if (Test-Path -LiteralPath $StartScript) {
   $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
   if (-not $pwsh) { $pwsh = (Get-Command powershell.exe -ErrorAction Stop).Source }
-  $startArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $StartScript)
+  $startArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ('"' + $StartScript + '"'))
   $bundledPython = Join-Path $Root 'runtime\python.exe'
   if (Test-Path -LiteralPath $bundledPython -PathType Leaf) {
-    $startArguments += @('-PythonPath', $bundledPython)
+    $startArguments += @('-PythonPath', ('"' + $bundledPython + '"'))
   }
   Start-Process -FilePath $pwsh -ArgumentList $startArguments -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
 }
