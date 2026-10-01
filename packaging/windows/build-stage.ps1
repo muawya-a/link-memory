@@ -6,10 +6,18 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $StageRoot = [IO.Path]::GetFullPath($StageRoot)
-$TempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
-$tempPrefix = $TempRoot.TrimEnd([char[]]@('\', '/')) + [IO.Path]::DirectorySeparatorChar
-if (-not $StageRoot.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-  throw "StageRoot must be inside the current user's temporary directory: $TempRoot"
+$TempRoots = @([IO.Path]::GetTempPath())
+if ($env:RUNNER_TEMP) { $TempRoots += $env:RUNNER_TEMP }
+$isSafeStagePath = $false
+foreach ($tempRoot in $TempRoots) {
+  $tempPrefix = [IO.Path]::GetFullPath($tempRoot).TrimEnd([char[]]@('\', '/')) + [IO.Path]::DirectorySeparatorChar
+  if ($StageRoot.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    $isSafeStagePath = $true
+    break
+  }
+}
+if (-not $isSafeStagePath) {
+  throw 'StageRoot must be inside the current user temporary directory or the GitHub Actions runner temporary directory.'
 }
 
 $PythonRuntimeRoot = [IO.Path]::GetFullPath($PythonRuntimeRoot)
@@ -88,3 +96,4 @@ foreach ($file in $rootFiles | Sort-Object -Unique) {
 }
 
 Write-Output "Staged Link Memory for Windows installer: $StageRoot"
+
