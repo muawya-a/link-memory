@@ -37,11 +37,11 @@ Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"
-Name: "{autoprograms}\Stop {#AppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\stop.ps1"""; WorkingDir: "{app}"; Flags: runhidden
+Name: "{autoprograms}\Stop {#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """"{app}\Stop-Link-Memory.vbs""""; WorkingDir: "{app}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{sys}\wscript.exe"; Parameters: """{app}\Start-Link-Memory.vbs"""; WorkingDir: "{app}"; Description: "Launch {#AppName}"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\stop.ps1"""; WorkingDir: "{app}"; Flags: runhidden
+Filename: "{sys}\wscript.exe"; Parameters: """"{app}\Stop-Link-Memory.vbs""""; WorkingDir: "{app}"

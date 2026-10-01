@@ -84,7 +84,7 @@ $rootFiles = @(
   '.env.example', 'CLIENT_INTEGRATIONS.md', 'DEPENDENCY_LICENSE_INVENTORY.csv',
   'IMPORTING_DATA.md', 'LICENSE', 'OPTIONAL_INTEGRATIONS.md', 'PRIVACY.md',
   'PROVIDER_API_DISCOVERY.md', 'README.md', 'SECURITY.md', 'SOURCE_PROVENANCE.md',
-  'Start-Link-Memory.ps1', 'Start-Link-Memory.vbs', 'THIRD_PARTY_NOTICES.md'
+  'Start-Link-Memory.ps1', 'Start-Link-Memory.vbs', 'Stop-Link-Memory.vbs', 'THIRD_PARTY_NOTICES.md'
 )
 $rootFiles += @(Get-ChildItem -LiteralPath $ProjectRoot -File -Filter 'requirements*.txt' | ForEach-Object Name)
 foreach ($file in $rootFiles | Sort-Object -Unique) {
@@ -96,4 +96,3 @@ foreach ($file in $rootFiles | Sort-Object -Unique) {
 }
 
 Write-Output "Staged Link Memory for Windows installer: $StageRoot"
-
