@@ -89,6 +89,8 @@ if ($PlanOnly) { return $plan }
 $Python = Resolve-LinkPythonExecutable -ExplicitPath $PythonPath
 $DataDir = $plan.DataRoot
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
+$LogDir = Join-Path $DataDir 'logs'
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 # Never inherit provider credentials or personal Codex paths from the parent
 # shell. Only a deliberately created sandbox .env may opt into a provider.
@@ -135,13 +137,18 @@ function Test-SandboxProcess([string]$ScriptPath) {
 
 $processArguments = if ($plan.ProcessMarker) { @($plan.ProcessMarker) } else { @() }
 if (-not (Test-SandboxProcess $Gateway)) {
-  Start-Process -FilePath $Python -ArgumentList (@('"' + $Gateway + '"') + $processArguments) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
+  Start-Process -FilePath $Python -ArgumentList (@('"' + $Gateway + '"') + $processArguments) -WorkingDirectory $Root -WindowStyle Hidden `
+    -RedirectStandardOutput (Join-Path $LogDir 'gateway.stdout.log') `
+    -RedirectStandardError (Join-Path $LogDir 'gateway.stderr.log') | Out-Null
 }
 
 if (-not (Test-SandboxProcess $Dashboard)) {
-  Start-Process -FilePath $Python -ArgumentList (@('"' + $Dashboard + '"') + $processArguments) -WorkingDirectory (Join-Path $Root 'dashboard') -WindowStyle Hidden | Out-Null
+  Start-Process -FilePath $Python -ArgumentList (@('"' + $Dashboard + '"') + $processArguments) -WorkingDirectory (Join-Path $Root 'dashboard') -WindowStyle Hidden `
+    -RedirectStandardOutput (Join-Path $LogDir 'dashboard.stdout.log') `
+    -RedirectStandardError (Join-Path $LogDir 'dashboard.stderr.log') | Out-Null
 }
 
 Write-Output "$Profile Gateway: http://127.0.0.1:$($plan.GatewayPort) (optional integrations depend on private .env settings)"
 Write-Output "$Profile Dashboard: http://127.0.0.1:$($plan.DashboardPort)/"
 Write-Output "$Profile file inbox watcher: disabled"
+

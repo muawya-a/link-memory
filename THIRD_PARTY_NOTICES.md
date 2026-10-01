@@ -32,6 +32,7 @@ The npm lockfile records 164 package entries across platforms; Windows installs 
 
 ## Optional dependencies and external services
 
+- The Windows installer bundles the official CPython 3.13.16 embeddable runtime from python.org. The runtime's included `LICENSE.txt` must remain with the redistributable runtime files. It is not covered by the Link Memory Apache-2.0 license or by the optional Python dependency inventory below.
 - Optional and developer Python packages are separated into feature-specific requirement files with hashed transitive locks for Windows x64/CPython 3.12. The reranker lock selects CPU PyTorch. Other platform/Python combinations require separately generated locks and install tests.
 - `graphiti-core==0.30.2` is from the official Graphiti project under Apache-2.0. Keep Graphiti's upstream notices if redistributing the package; the project adapter does not grant Graphiti/Zep trademark rights or imply endorsement. Graphiti OSS is distinct from hosted Zep services.
 - `mempalace==3.10.0` is published by the official MemPalace repository and PyPI under MIT. Preserve its copyright and license notice if redistributing it. This is an optional runtime dependency and is not copied into this repository.

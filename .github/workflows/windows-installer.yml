@@ -1,0 +1,168 @@
+name: Windows installer preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - windows-installer-preview-20261001
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-installer:
+    name: Build per-user Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python for build
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.16"
+
+      - name: Set up Node.js for dashboard build
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard-react/package-lock.json
+
+      - name: Build the dashboard
+        shell: pwsh
+        run: |
+          npm ci --prefix dashboard-react
+          npm run build --prefix dashboard-react
+
+      - name: Download and verify the bundled Python runtime
+        shell: pwsh
+        run: |
+          $version = '3.13.16'
+          $expectedSha256 = '97dae5274cc54867065e8d5a3226e48c35017ed332a0fdb0e27d5b5821961297'
+          $archive = Join-Path $env:RUNNER_TEMP "python-$version-embed-amd64.zip"
+          $runtime = Join-Path $env:RUNNER_TEMP "link-memory-python-runtime-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $url = "https://www.python.org/ftp/python/$version/python-$version-embed-amd64.zip"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) { throw 'The Python runtime SHA-256 does not match the pinned python.org release checksum.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath $runtime
+          if (-not (Test-Path -LiteralPath (Join-Path $runtime 'LICENSE.txt') -PathType Leaf)) { throw 'The Python archive does not contain LICENSE.txt.' }
+          & (Join-Path $runtime 'python.exe') -c "import sqlite3, sys; print(sys.version); print(sqlite3.sqlite_version)"
+          if ($LASTEXITCODE -ne 0) { throw 'The bundled Python runtime failed its standard-library startup check.' }
+          "PYTHON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Prepare a clean install tree
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "link-memory-stage-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          & .\packaging\windows\build-stage.ps1 -StageRoot $stage -PythonRuntimeRoot $env:PYTHON_RUNTIME_ROOT
+          $smokeData = Join-Path $env:RUNNER_TEMP "link-memory-stage-import-data-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $smokeData -Force | Out-Null
+          $env:MEMORY_GATEWAY_DATA = $smokeData
+          $env:MEMORY_GATEWAY_DB = Join-Path $smokeData 'gateway.sqlite3'
+          $env:PYTHONDONTWRITEBYTECODE = '1'
+          Push-Location $stage
+          try {
+            & (Join-Path $stage 'runtime\python.exe') -c "import dashboard.serve, gateway.server, http_routes; print('Gateway and dashboard imports succeeded.')"
+            if ($LASTEXITCODE -ne 0) { throw 'The bundled runtime could not import the local Gateway and dashboard.' }
+          } finally {
+            Pop-Location
+            Remove-Item Env:MEMORY_GATEWAY_DATA -ErrorAction SilentlyContinue
+            Remove-Item Env:MEMORY_GATEWAY_DB -ErrorAction SilentlyContinue
+            Remove-Item Env:PYTHONDONTWRITEBYTECODE -ErrorAction SilentlyContinue
+          }
+          "LINK_MEMORY_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw 'Inno Setup compiler was not found after installation.' }
+          $output = Join-Path $env:RUNNER_TEMP "link-memory-installer-output-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          & $compiler "/DStageDir=$env:LINK_MEMORY_STAGE" "/DOutputDir=$output" .\packaging\windows\LinkMemory.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
+          "LINK_MEMORY_INSTALLER_OUTPUT=$output" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install and smoke-test the packaged app
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:LINK_MEMORY_INSTALLER_OUTPUT 'LinkMemory-Setup-0.1.0.exe'
+          if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) { throw 'The compiled installer is missing.' }
+          $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Link Memory'
+          $install = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Silent installation failed with exit code $($install.ExitCode)." }
+          try {
+            $python = Join-Path $installRoot 'runtime\python.exe'
+            if (-not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'The installed bundled Python runtime is missing.' }
+            & $python -c "import sqlite3; print(sqlite3.sqlite_version)"
+            if ($LASTEXITCODE -ne 0) { throw 'The installed Python runtime could not load SQLite.' }
+            $launcher = Join-Path $installRoot 'Start-Link-Memory.ps1'
+            $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
+            Start-Process -FilePath $powershell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ('"' + $launcher + '"')) -WorkingDirectory $installRoot -WindowStyle Hidden | Out-Null
+            $ready = $false
+            $lastGatewayProbe = 'No response received.'
+            $lastDashboardProbe = 'No response received.'
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+              try {
+                $gateway = Invoke-RestMethod -Uri 'http://127.0.0.1:18000/health' -TimeoutSec 2
+                $lastGatewayProbe = "HTTP response; ok=$($gateway.ok)."
+              } catch { $lastGatewayProbe = $_.Exception.Message }
+              try {
+                $dashboard = Invoke-WebRequest -Uri 'http://127.0.0.1:18765/react/' -TimeoutSec 2
+                $lastDashboardProbe = "HTTP $($dashboard.StatusCode)."
+              } catch { $lastDashboardProbe = $_.Exception.Message }
+              if ($lastGatewayProbe -eq 'HTTP response; ok=True.' -and $lastDashboardProbe -eq 'HTTP 200.') { $ready = $true; break }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              Write-Output "Last Gateway probe: $lastGatewayProbe"
+              Write-Output "Last dashboard probe: $lastDashboardProbe"
+              Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object { $_.CommandLine -and $_.CommandLine.Contains($installRoot) } |
+                Select-Object Name, ProcessId, CommandLine | Format-Table -AutoSize | Out-String | Write-Output
+              $dataPath = Join-Path $env:LOCALAPPDATA 'Link Memory\data'
+              Get-ChildItem -LiteralPath $dataPath -Force -ErrorAction SilentlyContinue |
+                Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize | Out-String | Write-Output
+              $logPath = Join-Path $dataPath 'logs'
+              foreach ($log in @('gateway.stdout.log', 'gateway.stderr.log', 'dashboard.stdout.log', 'dashboard.stderr.log')) {
+                $logFile = Join-Path $logPath $log
+                if (Test-Path -LiteralPath $logFile) {
+                  Write-Output "--- $log ---"
+                  Get-Content -LiteralPath $logFile -Tail 60
+                }
+              }
+              throw 'The installed app did not serve both the Gateway health check and dashboard.'
+            }
+            Write-Output 'Installer smoke test passed: bundled Python, Gateway health, and dashboard HTTP.'
+          } finally {
+            $stop = Join-Path $installRoot 'scripts\stop.ps1'
+            if (Test-Path -LiteralPath $stop -PathType Leaf) {
+              & $powershell -NoProfile -ExecutionPolicy Bypass -File $stop
+            }
+            $uninstaller = Join-Path $installRoot 'unins000.exe'
+            if (Test-Path -LiteralPath $uninstaller -PathType Leaf) {
+              Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait | Out-Null
+            }
+          }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LinkMemory-Windows-Installer
+          path: ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
