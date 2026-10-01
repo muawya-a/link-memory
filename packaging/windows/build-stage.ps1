@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$ProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $StageRoot = [IO.Path]::GetFullPath($StageRoot)
 $TempRoots = @([IO.Path]::GetTempPath())
 if ($env:RUNNER_TEMP) { $TempRoots += $env:RUNNER_TEMP }
