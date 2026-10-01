@@ -45,7 +45,7 @@ jobs:
         shell: pwsh
         run: |
           $version = '3.13.16'
-          $expectedSha256 = 'd1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf'
+          $expectedSha256 = '97dae5274cc54867065e8d5a3226e48c35017ed332a0fdb0e27d5b5821961297'
           $archive = Join-Path $env:RUNNER_TEMP "python-$version-embed-amd64.zip"
           $runtime = Join-Path $env:RUNNER_TEMP "link-memory-python-runtime-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           $url = "https://www.python.org/ftp/python/$version/python-$version-embed-amd64.zip"
@@ -94,3 +94,4 @@ jobs:
           path: ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.exe
           if-no-files-found: error
           retention-days: 14
+
