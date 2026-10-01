@@ -1,11 +1,12 @@
-name: Windows installer preview
+name: Windows installer and release
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-      - windows-installer-preview-20261001
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -166,3 +167,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+
+  publish-release:
+    name: Attach installer to the published release
+    if: github.event_name == 'release' && github.event.action == 'published'
+    needs: build-installer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download tested installer
+        uses: actions/download-artifact@v4
+        with:
+          name: LinkMemory-Windows-Installer
+          path: installer
+
+      - name: Verify release asset exists
+        run: test -s installer/LinkMemory-Setup-0.1.0.exe
+
+      - name: Upload installer to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" installer/LinkMemory-Setup-0.1.0.exe --repo "$GITHUB_REPOSITORY"
