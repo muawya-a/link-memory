@@ -1,6 +1,10 @@
 # Link Memory
 
+[![CI](https://github.com/muawya-a/link-memory/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/muawya-a/link-memory/actions/workflows/ci.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE) [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#install-the-windows-app)
+
 Link Memory is a desktop-first memory workspace that captures, organizes, and retrieves useful context from conversations. This repository contains the self-hosted/local prototype, including its Gateway, dashboard, import tools, MCP server, optional hooks, and optional memory-provider adapters.
+
+> **Release status:** The Windows installer is still in preview review. There is no stable installer in [GitHub Releases](https://github.com/muawya-a/link-memory/releases) yet. The preview build is available from the [installer workflow run](https://github.com/muawya-a/link-memory/actions/runs/36825684058) as a temporary artifact; download `LinkMemory-Windows-Installer`, extract it, then run the setup executable. Preview artifacts expire, and this executable is not digitally signed yet.
 
 The project is provided under the Apache License 2.0; see [LICENSE](LICENSE) and [source provenance](SOURCE_PROVENANCE.md). Third-party components retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [the dependency license inventory](DEPENDENCY_LICENSE_INVENTORY.csv). The inventory records package metadata declarations; it is not a legal opinion.
 
@@ -12,7 +16,7 @@ The project is provided under the Apache License 2.0; see [LICENSE](LICENSE) and
 - Optional Codex and Claude Code prompt hooks that query the local Gateway. They are supplied as examples and are never installed into your AI client automatically.
 - Optional Graphiti, MemPalace, reranker, and Ollama/OpenRouter integration code. These require their own configuration and dependencies; see [OPTIONAL_INTEGRATIONS.md](OPTIONAL_INTEGRATIONS.md).
 - Low-resource fallback uses local deterministic rules. Better extraction can use an explicitly selected local model or API; the default does not download an AI model or send data to an external provider.
-- Bilingual desktop interface. The UI design and colors are retained; font files are not bundled.
+- Bilingual desktop interface with Arabic-capable system-font fallbacks; font files are not bundled.
 
 The default launcher binds local services to loopback and does not enable external providers automatically. You can opt into supported integrations in your private `.env` after reviewing what data each integration receives.
 
@@ -87,6 +91,10 @@ Downloading this source code does not import anyone's old or new conversation da
 | `gateway/` | API, local database, MCP, hooks, and adapters |
 | `scripts/` | Windows launchers, importers, backup, and client hook examples |
 | `data/` | Runtime data created locally; ignored by Git |
+| `packaging/windows/` | Windows installer definition and clean staging builder |
+| `deployment/` | Local staging profile and deployment notes |
+| `tests/` | Backend and dashboard test suites |
+| Root Markdown guides | Import, privacy, integrations, provenance, and security guidance |
 
 ## Developer checks
 
@@ -96,7 +104,7 @@ The existing test suites are under `tests/`. On Windows x64 with Python 3.12, in
 
 No font files are bundled. The interface uses installed system fonts with Arabic-capable fallbacks. For recommended font choices and their licenses, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Contributing and security
+## Security
 
 See [SECURITY.md](SECURITY.md) for the current reporting instructions. Before opening an issue, remove personal information, credentials, local paths, and private conversation content from logs or screenshots.
 
