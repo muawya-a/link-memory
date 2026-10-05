@@ -191,6 +191,15 @@ def handle_post(handler, services):
             handler.send_json({"error": "unauthorized"}, HTTPStatus.UNAUTHORIZED)
             return
         path = urllib.parse.urlparse(handler.path).path
+        if path == "/v1/mcp/connect":
+            try:
+                address = ipaddress.ip_address(str(handler.client_address[0]).split("%", 1)[0])
+                is_loopback = address.is_loopback or bool(address.ipv4_mapped and address.ipv4_mapped.is_loopback)
+            except (AttributeError, ValueError, TypeError):
+                is_loopback = False
+            if not is_loopback:
+                handler.send_json({"error": "client setup is local only"}, HTTPStatus.FORBIDDEN)
+                return
         if path in LOCAL_HOOK_CONTEXT_PATHS:
             try:
                 address = ipaddress.ip_address(str(handler.client_address[0]).split("%", 1)[0])
@@ -297,6 +306,8 @@ def handle_post(handler, services):
                 handler.send_json(services.set_hook_enabled(payload))
             elif path == "/v1/accounts":
                 handler.send_json({"account": services.save_source_account(payload), "accounts": services.list_source_accounts()})
+            elif path == "/v1/mcp/connect":
+                handler.send_json(services.connect_mcp_client(payload))
             else:
                 handler.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
         except PermissionError as exc:

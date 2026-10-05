@@ -57,6 +57,7 @@ export function Settings({ language }: { language: Lang }) {
   const [mcp, setMcp] = useState<R>({});
   const [mcpClient, setMcpClient] = useState<"codex" | "claude_code">("codex");
   const [mcpNotice, setMcpNotice] = useState("");
+  const [mcpConnectBusy, setMcpConnectBusy] = useState(false);
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [hooks, setHooks] = useState<R>({});
   const [hooksLoaded, setHooksLoaded] = useState(false);
@@ -337,6 +338,8 @@ export function Settings({ language }: { language: Lang }) {
   const mcpAvailable = typeof mcpStatus.mcp_available === "boolean"
     ? mcpStatus.mcp_available
     : null;
+  const selectedMcpClient = arr(mcpStatus.clients).map(rec).find((item) => item.id === mcpClient);
+  const mcpClientCliAvailable = selectedMcpClient?.cli_available === true;
   const selectedMcpConfig = rec(rec(mcpStatus.client_configs)[mcpClient]);
   const mcpConfigReady = mcpAvailable === true && typeof selectedMcpConfig.content === "string" && Boolean(selectedMcpConfig.content.trim());
   const freshMcpConfig = async () => {
@@ -382,6 +385,37 @@ export function Settings({ language }: { language: Lang }) {
       setMcpNotice(t(language, `تم تنزيل ${config.filename}. هذا لا يعني أن التطبيق متصل.`, `Downloaded ${config.filename}. This does not mean the app is connected.`));
     } catch (error) {
       setMcpNotice(error instanceof Error ? error.message : t(language, "تعذر تنزيل الإعداد.", "Could not download the configuration."));
+    }
+  };
+  const connectMcpClient = async () => {
+    if (!mcpClientCliAvailable || !mcpConfigReady) return;
+    setMcpConnectBusy(true);
+    setMcpNotice("");
+    try {
+      const result = rec(await post("/v1/mcp/connect", { client: mcpClient, confirmed: true }));
+      if (result.state === "name_conflict") {
+        setMcpNotice(t(language, "يوجد إعداد سابق باسم link-memory؛ لم نغيّره. راجعه من إعدادات التطبيق أو احذف الاسم يدويًا ثم أعد المحاولة.", "A server named link-memory already exists; it was left unchanged. Review it in the client settings or remove that entry yourself, then retry."));
+        return;
+      }
+      if (result.state === "cli_unavailable") {
+        setMcpNotice(t(language, `لم نعثر على ${mcpClient === "codex" ? "Codex CLI" : "Claude Code CLI"}. ثبّت التطبيق وافتح Link Memory مجددًا.`, `Could not find ${mcpClient === "codex" ? "Codex CLI" : "Claude Code CLI"}. Install the client and reopen Link Memory.`));
+        return;
+      }
+      if (result.state === "already_configured") {
+        setMcpNotice(t(language, `إعداد Link Memory موجود مسبقًا في ${mcpClient === "codex" ? "Codex" : "Claude Code"}، ولم نغيّره. أعد تشغيل التطبيق ووافق على الخادم إذا طلب ذلك؛ الاتصال الفعلي لم يُتحقق منه بعد.`, `Link Memory is already registered in ${mcpClient === "codex" ? "Codex" : "Claude Code"}; it was left unchanged. Restart the client and approve the server if prompted; a live connection has not been verified.`));
+        return;
+      }
+      if (result.ok !== true) {
+        setMcpNotice(t(language, "تعذر تسجيل الخادم. لم نعرض مخرجات الطرفية لأنها قد تتضمن مسارات محلية؛ يمكنك تنزيل مقطع الإعداد للمراجعة اليدوية.", "Could not register the server. Terminal output is hidden because it may contain local paths; you can download the configuration snippet for manual review."));
+        return;
+      }
+      const live = rec(await api("/v1/mcp/status"));
+      setMcp(live);
+      setMcpNotice(t(language, `أُضيف Link Memory إلى إعداد ${mcpClient === "codex" ? "Codex" : "Claude Code"} المحلي. أعد تشغيل التطبيق ووافق على الخادم إذا طلب ذلك؛ الاتصال الفعلي لم يُتحقق منه بعد. لا تُحفَظ المحادثات تلقائيًا.`, `Link Memory was added to the local ${mcpClient === "codex" ? "Codex" : "Claude Code"} configuration. Restart the client and approve the server if prompted; a live connection has not been verified. Conversations are not saved automatically.`));
+    } catch (error) {
+      setMcpNotice(error instanceof Error ? error.message : t(language, "تعذر ربط التطبيق.", "Could not connect the app."));
+    } finally {
+      setMcpConnectBusy(false);
     }
   };
   return (
@@ -763,7 +797,18 @@ export function Settings({ language }: { language: Lang }) {
               ? t(language, "ادمج الإعداد داخل .mcp.json في جذر المشروع، أو نزّل link-memory.mcp.json وانقل محتواه. لم نتحقق من اتصال Claude Code.", "Merge this entry into the project-root .mcp.json, or download link-memory.mcp.json and copy its contents. Claude Code connectivity has not been verified.")
               : t(language, "إعداد العميل غير متاح من نسخة Gateway الحالية. حدّث Gateway لتفعيل النسخ والتنزيل.", "Client configuration is unavailable from this Gateway version. Update Gateway to enable copying and download.")}
         </p>
+        <p className="lp-muted">
+          {mcpClientCliAvailable
+            ? t(language, `زر الربط يضيف خادم MCP المحلي إلى إعداد المستخدم في ${mcpClient === "codex" ? "Codex" : "Claude Code"}. لا يثبت hooks ولا يستورد المحادثات؛ حفظ الذاكرة يتم فقط عند طلب أداة الذاكرة.`, `Connect adds the local MCP server to the ${mcpClient === "codex" ? "Codex" : "Claude Code"} user configuration. It does not install hooks or import conversations; memories are saved only when a memory tool is explicitly used.`)
+            : t(language, `لم يُكتشف ${mcpClient === "codex" ? "Codex CLI" : "Claude Code CLI"} على هذا الجهاز. ثبّت التطبيق أولًا، أو استخدم مقطع الإعداد اليدوي أدناه.`, `${mcpClient === "codex" ? "Codex CLI" : "Claude Code CLI"} was not detected on this computer. Install the app first, or use the manual configuration snippet below.`)}
+        </p>
         <div className="lp-actions">
+          <Button disabled={!mcpConfigReady || !mcpClientCliAvailable || mcpConnectBusy} onClick={() => void connectMcpClient()}>
+            <ShieldCheck size={17} className={mcpConnectBusy ? "lp-spin" : ""} />
+            {mcpConnectBusy
+              ? t(language, "يربط…", "Connecting…")
+              : t(language, `ربط ${mcpClient === "codex" ? "Codex" : "Claude Code"} الآن`, `Connect ${mcpClient === "codex" ? "Codex" : "Claude Code"} now`)}
+          </Button>
           <Button disabled={!mcpConfigReady} onClick={() => void copyMcpConfig()}>
             <ShieldCheck size={17} />
             {t(language, "نسخ إعداد التطبيق", "Copy app configuration")}

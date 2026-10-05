@@ -2,6 +2,12 @@
 
 The hook scripts are optional local integrations. They are not installed or registered by the Link Memory launcher. They send the current prompt text to the local Gateway endpoint for bounded recall, then provide returned context to the coding assistant. The Gateway is configured by default for loopback. Remote provider use is separately controlled by Link Memory configuration.
 
+## Quick setup from Link Memory
+
+Open **Settings → Memory connection**, select Codex or Claude Code, then choose **Connect**. Link Memory uses the selected client's installed CLI to register its local MCP server in that user's configuration. Install and sign in to the client first. After registration, restart the client and review its MCP trust prompt if shown. Registration does not confirm that the client has started the server.
+
+The setup refuses to replace an existing server named `link-memory`; review that entry in the client before changing it. It does not install prompt hooks or import conversations. The assistant can call memory tools when needed, and saving/importing content remains an explicit action. The copy/download options below remain available if the CLI is not installed.
+
 These snippets are examples. Review the script path, Python interpreter, Gateway key, and client config before adding them. Back up your existing configuration first. Removing the added hook entry disables the integration without uninstalling Link Memory.
 
 ## Connect the MCP server for explicit capture and retrieval

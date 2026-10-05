@@ -13,7 +13,7 @@ The project is provided under the Apache License 2.0; see [LICENSE](LICENSE) and
 - Desktop dashboard for capture, search, review, and memory administration.
 - Local Gateway with SQLite storage, backup helpers, audit/history paths, and MCP interface.
 - Import from user-selected text, Markdown, JSON, JSONL, Codex CLI session files, and Claude Code transcript files.
-- Optional Codex and Claude Code prompt hooks that query the local Gateway. They are supplied as examples and are never installed into your AI client automatically.
+- Optional local MCP connection for Codex and Claude Code from Settings when the selected client's CLI is installed. Prompt hooks stay separate and are never installed automatically.
 - Optional Graphiti, MemPalace, reranker, and Ollama/OpenRouter integration code. These require their own configuration and dependencies; see [OPTIONAL_INTEGRATIONS.md](OPTIONAL_INTEGRATIONS.md).
 - Low-resource fallback uses local deterministic rules. Better extraction can use an explicitly selected local model or API; the default does not download an AI model or send data to an external provider.
 - Bilingual desktop interface with Arabic-capable system-font fallbacks; font files are not bundled.
@@ -22,14 +22,14 @@ The default launcher binds local services to loopback and does not enable extern
 
 ## Install the Windows app
 
-Download `LinkMemory-Setup-*.exe` from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest), run it, then launch Link Memory from the Start menu. It installs per-user and bundles the Python runtime and prebuilt dashboard, so Python, Node.js, and a terminal are not needed. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The executable is unsigned; Windows may show a SmartScreen warning. Use the source setup below only for development.
+Download `LinkMemory-Setup-*.exe` from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest), run it, then launch Link Memory from the Start menu. It installs per-user and bundles the Python runtime and prebuilt dashboard, so Python, Node.js, `node_modules`, and a terminal are not needed. `node_modules` is used only by GitHub Actions while building the dashboard and is excluded from the installer. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The executable is unsigned; Windows may show a SmartScreen warning. Use the source setup below only for development.
 
 The app stores installed runtime data under `%LOCALAPPDATA%\Link Memory\data`, separately from the program files. The installer is designed to preserve this data folder during uninstall.
 
 ## Requirements
 
-- The Windows x64 installer includes a bundled per-user Python runtime and a prebuilt dashboard; it does not require users to install Python or Node.js.
-- The source-download route below is for developers and requires Python and Node.js.
+- The Windows x64 installer includes a bundled per-user Python runtime and a prebuilt dashboard; it does not require users to install Python, Node.js, or `node_modules`.
+- The source-download route below is for developers. Its one-time setup requires Python, Node.js, and npm to build the dashboard.
 - Windows 10 or 11 for the supplied PowerShell launcher.
 - Python 3.10 or later.
 - Node.js 20 or later and npm to build the dashboard.
@@ -68,9 +68,9 @@ Codex CLI session import reads `CODEX_HOME/sessions` (or `~/.codex/sessions` if 
 
 This supports local Codex CLI and Claude Code files. It does **not** connect to or download history from ChatGPT/Codex Cloud, Claude.ai, or another hosted account. For cloud histories, use an export you obtain yourself and review it before importing with `scripts/import_file.py`.
 
-## Optional Codex and Claude Code live recall
+## Connect Codex and Claude Code
 
-The repository includes hooks, but installs neither hook nor MCP settings automatically. Follow [CLIENT_INTEGRATIONS.md](CLIENT_INTEGRATIONS.md) to configure a local hook manually. Hooks send the current prompt text to your local Gateway for retrieval. If you enable a remote model/provider in Link Memory, that provider may receive imported or queried content as described in [PRIVACY.md](PRIVACY.md).
+From Settings, select Codex or Claude Code and choose **Connect** to register Link Memory's local MCP server in that user's client configuration. The matching client CLI must already be installed. Restart the client and review its trust prompt if shown. This does not install hooks or import/save conversations automatically; memory tools act only when explicitly used. Manual config snippets and optional prompt hooks are documented in [CLIENT_INTEGRATIONS.md](CLIENT_INTEGRATIONS.md). If you enable a remote model/provider in Link Memory, that provider may receive imported or queried content as described in [PRIVACY.md](PRIVACY.md).
 
 ## Privacy and data handling
 
@@ -111,6 +111,8 @@ See [SECURITY.md](SECURITY.md) for the current reporting instructions. Before op
 ## العربية
 
 Link Memory مساحة ذاكرة مكتبية تجمع بين الحفظ والبحث والاسترجاع من سياق المحادثات. يحتوي هذا المستودع على النموذج المحلي: لوحة التحكم، والـGateway، وقاعدة SQLite، وأدوات الاستيراد، وMCP، وملفات التكامل الاختيارية مع Codex وClaude Code ومزوّدات الذاكرة.
+
+للتثبيت العادي على Windows، نزّل ملف `LinkMemory-Setup-*.exe` من صفحة Releases. الواجهة مبنية ومضمّنة في المثبّت؛ المستخدم لا يحتاج Node.js أو مجلد `node_modules` أو الطرفية. تنزيل Source code ZIP مخصص للمطورين، وخطواته تبني الواجهة وتتطلب Python وNode.js وnpm.
 
 الترخيص المختار للمشروع هو Apache-2.0، مع بقاء تراخيص المكونات الخارجية مستقلة. الخطوط غير مضمّنة. التشغيل الافتراضي محلي على الجهاز، والتكاملات الخارجية لا تعمل حتى يضبطها المستخدم في ملف `.env` الخاص به.
 

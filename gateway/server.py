@@ -17,6 +17,7 @@ import math
 import os
 import re
 import sqlite3
+import shutil
 import subprocess
 import sys
 import threading
@@ -1293,25 +1294,28 @@ def mcp_status() -> dict[str, Any]:
     client_env = {"PYTHONIOENCODING": "utf-8", "MEMORY_GATEWAY_URL": gateway_url}
     mcp_available = mcp_path.exists()
     codex_bridge_present = hook_path.exists()
+    codex_cli = shutil.which("codex")
+    claude_cli = shutil.which("claude")
     clients = [
         {
+            "id": "codex",
             "name": "Codex",
             "active": False,
             "connected": False,
+            "cli_available": bool(codex_cli),
             "mcp_available": mcp_available,
             "bridge_present": codex_bridge_present,
-            "status": "الجسر موجود · جلسة العميل غير متحققة" if codex_bridge_present else "الجسر غير موجود · جلسة العميل غير متحققة",
+            "status": "CLI متاح · جلسة العميل غير متحققة" if codex_cli else "CLI غير موجود · جلسة العميل غير متحققة",
         },
-        *[
-            {
-                "name": name,
-                "active": False,
-                "connected": False,
-                "mcp_available": mcp_available,
-                "status": "خادم MCP متاح · تهيئة العميل واتصاله غير متحققين" if mcp_available else "خادم MCP غير متاح · تهيئة العميل واتصاله غير متحققين",
-            }
-            for name in ("Claude", "ChatGPT", "Gemini", "Grok / Hermes")
-        ],
+        {
+            "id": "claude_code",
+            "name": "Claude Code",
+            "active": False,
+            "connected": False,
+            "cli_available": bool(claude_cli),
+            "mcp_available": mcp_available,
+            "status": "CLI متاح · جلسة العميل غير متحققة" if claude_cli else "CLI غير موجود · جلسة العميل غير متحققة",
+        },
     ]
     config = {"mcpServers": {"link-memory": {"command": command, "args": args, "cwd": cwd, "env": client_env}}}
     config_toml = "\n".join((
@@ -1344,6 +1348,110 @@ def mcp_status() -> dict[str, Any]:
               "memory_capture after responding. Decompose messages into meaningful clauses, but never send a "
               "full history or duplicate memory store. Do not create a second hook; all clients use the same gateway.")
     return {"ok": mcp_available, "mcp_available": mcp_available, "name": "link-memory", "transport": "stdio", "gateway_url": gateway_url, "command": command, "args": args, "cwd": cwd, "config": config, "client_configs": client_configs, "prompt": prompt, "tools": ["memory_recall", "memory_context", "memory_interactive_context", "memory_remember", "memory_status", "memory_ingest", "memory_capture", "memory_import", "memory_conflicts", "memory_layers"], "clients": clients, "shared_hook_contract": False, "interactive_recall_required": True}
+
+
+def connect_mcp_client(payload: dict[str, Any]) -> dict[str, Any]:
+    """Register only Link Memory's local MCP server via the selected client CLI."""
+    client = str(payload.get("client", "")).strip().lower()
+    if client not in {"codex", "claude_code"}:
+        raise ValueError("unsupported MCP client")
+    if payload.get("confirmed") is not True:
+        raise ValueError("explicit confirmation is required")
+
+    executable_name = "codex" if client == "codex" else "claude"
+    executable = shutil.which(executable_name)
+    if not executable:
+        return {"ok": False, "state": "cli_unavailable", "client": client}
+
+    mcp_path = (ROOT / "gateway" / "mcp_server.py").resolve()
+    if not mcp_path.is_file():
+        return {"ok": False, "state": "server_unavailable", "client": client}
+
+    # Refuse to replace any user-owned entry with the same name. The app does
+    # not parse/rewrite either client's private config file itself.
+    list_args = [executable, "mcp", "list"]
+    if client == "codex":
+        list_args.append("--json")
+    get_args = [executable, "mcp", "get", "link-memory"]
+    if client == "codex":
+        get_args.append("--json")
+    try:
+        listed = subprocess.run(
+            list_args,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=12,
+            check=False,
+        )
+        if listed.returncode != 0:
+            return {"ok": False, "state": "cli_failed", "client": client}
+        existing = subprocess.run(
+            get_args,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=12,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "state": "cli_failed", "client": client}
+    if existing.returncode == 0:
+        existing_config = (existing.stdout + "\n" + existing.stderr).lower()
+        normalized_config = existing_config.replace("\\\\", "/").replace("\\", "/")
+        normalized_mcp_path = str(mcp_path).lower().replace("\\", "/")
+        if normalized_mcp_path in normalized_config:
+            return {
+                "ok": True,
+                "state": "already_configured",
+                "client": client,
+                "scope": "user",
+                "requires_restart": True,
+                "connection_verified": False,
+                "captures_automatically": False,
+            }
+        return {"ok": False, "state": "name_conflict", "client": client}
+
+    gateway_url = os.getenv("MEMORY_GATEWAY_URL", f"http://127.0.0.1:{PORT}").strip().rstrip("/") or f"http://127.0.0.1:{PORT}"
+    if client == "codex":
+        command = [
+            executable, "mcp", "add", "link-memory",
+            "--env", "PYTHONIOENCODING=utf-8",
+            "--env", f"MEMORY_GATEWAY_URL={gateway_url}",
+            "--", sys.executable, str(mcp_path),
+        ]
+    else:
+        command = [
+            executable, "mcp", "add", "--scope", "user",
+            "--env", "PYTHONIOENCODING=utf-8",
+            "--env", f"MEMORY_GATEWAY_URL={gateway_url}",
+            "link-memory", "--", sys.executable, str(mcp_path),
+        ]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "state": "cli_failed", "client": client}
+    if result.returncode != 0:
+        # CLI diagnostics may contain local paths or configuration details;
+        # expose only a stable state and keep the raw output out of the UI.
+        return {"ok": False, "state": "registration_failed", "client": client}
+
+    return {
+        "ok": True,
+        "state": "registered",
+        "client": client,
+        "scope": "user",
+        "requires_restart": True,
+        "connection_verified": False,
+        "captures_automatically": False,
+    }
 
 
 def auth_ok(handler: BaseHTTPRequestHandler) -> bool:
