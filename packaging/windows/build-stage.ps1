@@ -84,7 +84,7 @@ if ($pythonPathEntries -notcontains '..\gateway') {
 }
 
 $rootFiles = @(
-  '.env.example', 'CLIENT_INTEGRATIONS.md', 'DEPENDENCY_LICENSE_INVENTORY.csv',
+  '.env.example', 'CHANGELOG.md', 'CLIENT_INTEGRATIONS.md', 'DEPENDENCY_LICENSE_INVENTORY.csv',
   'IMPORTING_DATA.md', 'LICENSE', 'OPTIONAL_INTEGRATIONS.md', 'PRIVACY.md',
   'PROVIDER_API_DISCOVERY.md', 'README.md', 'SECURITY.md', 'SOURCE_PROVENANCE.md',
   'Start-Link-Memory.ps1', 'Start-Link-Memory.vbs', 'Stop-Link-Memory.vbs', 'THIRD_PARTY_NOTICES.md'

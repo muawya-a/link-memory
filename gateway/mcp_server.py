@@ -288,7 +288,7 @@ def main() -> None:
             request_id = request.get("id")
             method = request.get("method")
             if method == "initialize":
-                result(request_id, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "link-memory", "version": "0.1.0"}})
+                result(request_id, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "link-memory", "version": "0.1.1"}})
             elif method == "notifications/initialized":
                 continue
             elif method == "tools/list":

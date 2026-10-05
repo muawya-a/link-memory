@@ -4,7 +4,7 @@ The installer bundles a prebuilt dashboard and the official Python embeddable ru
 
 ## Build
 
-Run the `Windows installer preview` workflow from the repository's Actions page. It builds the React dashboard, downloads the 64-bit Python 3.13.16 embeddable runtime from python.org and verifies its SHA-256 checksum, checks Python's standard-library SQLite support and license notice, stages only project files, compiles the Inno Setup installer, and uploads `LinkMemory-Setup-0.1.0.exe` as a 14-day workflow artifact.
+Push to `main` to run the Windows installer workflow. It builds the React dashboard in CI, downloads the 64-bit Python 3.13.16 embeddable runtime from python.org and verifies its SHA-256 checksum, checks Python's standard-library SQLite support and license notice, stages only project files (excluding `node_modules`), compiles the Inno Setup installer, installs and smoke-tests it, and uploads the installer plus SHA-256 checksum as a 14-day workflow artifact. To publish a release, create a draft for the tested tag, attach the tested installer and checksum, then publish the draft; the release workflow rebuilds, smoke-tests, verifies the checksum, and replaces those assets.
 
 This workflow does not publish a GitHub Release. A maintainer must review the artifact on a clean Windows 10/11 profile, confirm upgrade and uninstall behavior, check that user data remains in place, and then decide whether to publish it as a Release.
 

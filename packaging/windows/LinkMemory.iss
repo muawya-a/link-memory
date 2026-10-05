@@ -1,5 +1,5 @@
 #define AppName "Link Memory"
-#define AppVersion "0.1.0"
+#define AppVersion "0.1.1"
 #ifndef StageDir
   #error StageDir must point to the prepared Windows application directory.
 #endif

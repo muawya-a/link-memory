@@ -48,7 +48,7 @@ def handle_get(handler, services, parsed):
                     "open_conflicts": services.DB.execute("SELECT COUNT(*) FROM conflicts WHERE status='open'").fetchone()[0],
                     "analysis_jobs": services.DB.execute("SELECT COUNT(*) FROM analysis_jobs WHERE status IN ('queued','running')").fetchone()[0],
                 }
-            handler.send_json({"ok": True, "service": "memory-gateway", "version": "0.1.0", "counts": counts, "providers": services.provider_status(), "ollama": {"enabled": services.OLLAMA_ENABLED, "model": services.OLLAMA_MODEL, "embedding_model": services.OLLAMA_EMBED_MODEL, "keep_alive": services.OLLAMA_KEEP_ALIVE, "warmup": dict(services.WARMUP_STATE)}, "analysis": services.analysis_status()})
+            handler.send_json({"ok": True, "service": "memory-gateway", "version": "0.1.1", "counts": counts, "providers": services.provider_status(), "ollama": {"enabled": services.OLLAMA_ENABLED, "model": services.OLLAMA_MODEL, "embedding_model": services.OLLAMA_EMBED_MODEL, "keep_alive": services.OLLAMA_KEEP_ALIVE, "warmup": dict(services.WARMUP_STATE)}, "analysis": services.analysis_status()})
             return
         if not services.auth_ok(handler):
             handler.send_json({"error": "unauthorized"}, HTTPStatus.UNAUTHORIZED)

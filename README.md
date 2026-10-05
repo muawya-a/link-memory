@@ -22,7 +22,7 @@ The default launcher binds local services to loopback and does not enable extern
 
 ## Install the Windows app
 
-Download `LinkMemory-Setup-*.exe` from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest), run it, then launch Link Memory from the Start menu. It installs per-user and bundles the Python runtime and prebuilt dashboard, so Python, Node.js, `node_modules`, and a terminal are not needed. `node_modules` is used only by GitHub Actions while building the dashboard and is excluded from the installer. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The executable is unsigned; Windows may show a SmartScreen warning. Use the source setup below only for development.
+Download `LinkMemory-Setup-*.exe` from [GitHub Releases](https://github.com/muawya-a/link-memory/releases/latest), run it, then launch Link Memory from the Start menu. It installs per-user and bundles the Python runtime and prebuilt dashboard, so Python, Node.js, `node_modules`, and a terminal are not needed. `node_modules` is used only by GitHub Actions while building the dashboard and is excluded from the installer. Releases include a SHA-256 checksum file beside the installer. The installer is for Windows x64; optional provider/model integrations remain separate opt-ins. The executable is unsigned; Windows may show a SmartScreen warning. Use the source setup below only for development.
 
 The app stores installed runtime data under `%LOCALAPPDATA%\Link Memory\data`, separately from the program files. The installer is designed to preserve this data folder during uninstall.
 
@@ -94,7 +94,7 @@ Downloading this source code does not import anyone's old or new conversation da
 | `packaging/windows/` | Windows installer definition and clean staging builder |
 | `deployment/` | Local staging profile and deployment notes |
 | `tests/` | Backend and dashboard test suites |
-| Root Markdown guides | Import, privacy, integrations, provenance, and security guidance |
+| Root Markdown guides | Changelog, import, privacy, integrations, provenance, and security guidance |
 
 ## Developer checks
 

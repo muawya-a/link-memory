@@ -89,18 +89,23 @@ jobs:
       - name: Compile installer
         shell: pwsh
         run: |
+          $versionLine = Select-String -Path .\packaging\windows\LinkMemory.iss -Pattern '^#define AppVersion "([^"]+)"$' | Select-Object -First 1
+          if (-not $versionLine -or $versionLine.Matches.Count -ne 1) { throw 'Could not read the installer version from LinkMemory.iss.' }
+          $version = $versionLine.Matches[0].Groups[1].Value
+          if ($env:GITHUB_EVENT_NAME -eq 'release' -and $env:GITHUB_REF_NAME -ne "v$version") { throw "Release tag $env:GITHUB_REF_NAME does not match installer version $version." }
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (-not (Test-Path -LiteralPath $compiler)) { throw 'Inno Setup compiler was not found after installation.' }
           $output = Join-Path $env:RUNNER_TEMP "link-memory-installer-output-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           New-Item -ItemType Directory -Path $output -Force | Out-Null
           & $compiler "/DStageDir=$env:LINK_MEMORY_STAGE" "/DOutputDir=$output" .\packaging\windows\LinkMemory.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
+          "LINK_MEMORY_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "LINK_MEMORY_INSTALLER_OUTPUT=$output" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install and smoke-test the packaged app
         shell: pwsh
         run: |
-          $installer = Join-Path $env:LINK_MEMORY_INSTALLER_OUTPUT 'LinkMemory-Setup-0.1.0.exe'
+          $installer = Join-Path $env:LINK_MEMORY_INSTALLER_OUTPUT "LinkMemory-Setup-$env:LINK_MEMORY_VERSION.exe"
           if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) { throw 'The compiled installer is missing.' }
           $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Link Memory'
           $install = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
@@ -159,11 +164,20 @@ jobs:
             }
           }
 
+      - name: Create installer SHA-256 checksum
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:LINK_MEMORY_INSTALLER_OUTPUT "LinkMemory-Setup-$env:LINK_MEMORY_VERSION.exe"
+          $checksum = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$checksum  $(Split-Path -Leaf $installer)" | Set-Content -LiteralPath "$installer.sha256" -Encoding Ascii
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: LinkMemory-Windows-Installer
-          path: ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.exe
+          path: |
+            ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.exe
+            ${{ env.LINK_MEMORY_INSTALLER_OUTPUT }}/*.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -184,9 +198,19 @@ jobs:
           path: installer
 
       - name: Verify release asset exists
-        run: test -s installer/LinkMemory-Setup-0.1.0.exe
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          installer="LinkMemory-Setup-$version.exe"
+          checksum="$installer.sha256"
+          test -s "installer/$installer"
+          test -s "installer/$checksum"
+          (cd installer && sha256sum --check --strict "$checksum")
 
       - name: Upload installer to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" installer/LinkMemory-Setup-0.1.0.exe --repo "$GITHUB_REPOSITORY"
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          installer="LinkMemory-Setup-$version.exe"
+          gh release upload "$GITHUB_REF_NAME" "installer/$installer" "installer/$installer.sha256" --clobber --repo "$GITHUB_REPOSITORY"
